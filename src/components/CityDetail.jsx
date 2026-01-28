@@ -1,0 +1,274 @@
+// City images - using high quality Unsplash images
+const CITY_IMAGES = {
+    'tokyo': 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80',
+    'new york': 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80',
+    'paris': 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80',
+    'london': 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&q=80',
+    'san francisco': 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&q=80',
+    'los angeles': 'https://images.unsplash.com/photo-1534190760961-74e8c1c5c3da?w=800&q=80',
+    'berlin': 'https://images.unsplash.com/photo-1528728329032-2972f65dfb3f?w=800&q=80',
+    'sydney': 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800&q=80',
+    'dubai': 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=80',
+    'singapore': 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=800&q=80',
+    'default': 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80'
+};
+
+// Avatar background colors
+const AVATAR_COLORS = ['#A0E8AF', '#FF7F6C', '#C4A7E7', '#FFEB3B', '#FF90B3', '#CCFF00'];
+
+function getCityImage(cityName) {
+    const key = cityName?.toLowerCase() || 'default';
+    return CITY_IMAGES[key] || CITY_IMAGES.default;
+}
+
+// Format relative time
+function timeAgo(dateString) {
+    if (!dateString) return 'Never';
+    const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+    if (seconds < 60) return 'Active now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return new Date(dateString).toLocaleDateString();
+}
+
+// Check if recently active (within 10 minutes)
+function isActive(dateString) {
+    if (!dateString) return false;
+    const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+    return seconds < 600; // 10 minutes
+}
+
+export function CityDetail({ city, onBack }) {
+    if (!city) return null;
+
+    const { city: cityName, country, friends = [] } = city;
+
+    return (
+        <div className="city-detail">
+            {/* Hero Image */}
+            <div className="city-hero">
+                <img
+                    src={getCityImage(cityName)}
+                    alt={cityName}
+                    className="city-hero-image"
+                />
+
+                {/* Wavy mask at bottom */}
+                <div className="city-hero-mask" style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '8rem',
+                    background: 'var(--accent-lavender)',
+                    clipPath: 'polygon(0% 100%, 100% 100%, 100% 0%, 85% 25%, 70% 0%, 55% 45%, 40% 10%, 25% 60%, 10% 20%, 0% 70%)'
+                }}></div>
+
+                {/* Header */}
+                <header className="city-hero-header">
+                    <button
+                        className="city-hero-btn"
+                        onClick={onBack}
+                    >
+                        <span className="material-symbols-outlined">arrow_back_ios_new</span>
+                    </button>
+
+                    <div className="city-hero-title">
+                        <h1>{cityName}</h1>
+                        <span className="badge-dark">
+                            {friends.length} Friend{friends.length !== 1 ? 's' : ''} Active
+                        </span>
+                    </div>
+
+                    <button className="city-hero-btn">
+                        <span className="material-symbols-outlined">more_horiz</span>
+                    </button>
+                </header>
+            </div>
+
+            {/* Friends List */}
+            <main className="city-friends-list">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-sm font-black uppercase tracking-wider" style={{ color: 'rgba(0,0,0,0.4)' }}>
+                        Friends Nearby
+                    </h3>
+                    <span className="material-symbols-outlined" style={{ color: 'rgba(0,0,0,0.3)' }}>
+                        filter_list
+                    </span>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                    {friends.map((friend, index) => {
+                        const avatarColor = AVATAR_COLORS[index % AVATAR_COLORS.length];
+                        const active = isActive(friend.updatedAt || friend.location?.updatedAt);
+                        const locationName = friend.location?.neighborhood || friend.location?.city || 'Unknown';
+
+                        return (
+                            <div
+                                key={friend.id}
+                                className="friend-item"
+                                style={{ opacity: active ? 1 : 0.8 }}
+                            >
+                                <div className={`friend-item-avatar ${active ? 'avatar-status' : 'avatar-status offline'}`}>
+                                    <div className="avatar avatar-lg" style={{ background: avatarColor }}>
+                                        {friend.displayName?.charAt(0)?.toUpperCase() ||
+                                            friend.display_name?.charAt(0)?.toUpperCase() || '?'}
+                                    </div>
+                                </div>
+
+                                <div className="friend-item-info">
+                                    <p className="friend-item-name">
+                                        {friend.displayName || friend.display_name || 'Unknown'}
+                                    </p>
+                                    <p className="friend-item-location">
+                                        {locationName} • {timeAgo(friend.updatedAt || friend.location?.updatedAt)}
+                                    </p>
+                                </div>
+
+                                <button className="friend-item-action">
+                                    <span className="material-symbols-outlined" style={{
+                                        fontSize: '1.25rem',
+                                        opacity: active ? 1 : 0.3
+                                    }}>
+                                        near_me
+                                    </span>
+                                </button>
+                            </div>
+                        );
+                    })}
+                </div>
+            </main>
+
+            {/* Message Group CTA */}
+            <div className="city-cta">
+                <button className="btn-primary" style={{ width: '100%', height: '4rem', fontSize: '1.25rem' }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: '1.5rem' }}>chat_bubble</span>
+                    Message Group
+                </button>
+            </div>
+
+            {/* Decorative Blurs */}
+            <div className="city-blur city-blur-1"></div>
+            <div className="city-blur city-blur-2"></div>
+
+            <style>{`
+                .city-detail {
+                    position: relative;
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 100vh;
+                    width: 100%;
+                    max-width: 28rem;
+                    margin: 0 auto;
+                    background: var(--accent-lavender);
+                    overflow-x: hidden;
+                }
+
+                .city-hero {
+                    position: relative;
+                    height: 24rem;
+                    width: 100%;
+                    overflow: hidden;
+                }
+
+                .city-hero-image {
+                    position: absolute;
+                    inset: 0;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .city-hero-header {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    z-index: 20;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 3rem 1.5rem 1.5rem;
+                }
+
+                .city-hero-btn {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 2.75rem;
+                    height: 2.75rem;
+                    border-radius: var(--radius-full);
+                    background: rgba(255,255,255,0.2);
+                    backdrop-filter: blur(12px);
+                    border: 1px solid rgba(255,255,255,0.3);
+                    color: white;
+                    cursor: pointer;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                }
+
+                .city-hero-title {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                }
+
+                .city-hero-title h1 {
+                    font-size: 1.875rem;
+                    font-weight: 900;
+                    text-transform: uppercase;
+                    letter-spacing: -0.02em;
+                    color: white;
+                    text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                }
+
+                .city-friends-list {
+                    flex: 1;
+                    padding: 0 1.5rem;
+                    margin-top: -2rem;
+                    position: relative;
+                    z-index: 10;
+                    padding-bottom: 8rem;
+                }
+
+                .city-cta {
+                    position: fixed;
+                    bottom: 0;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 100%;
+                    max-width: 28rem;
+                    padding: 1.5rem;
+                    background: linear-gradient(to top, var(--accent-lavender) 50%, transparent);
+                    z-index: 30;
+                }
+
+                .city-blur {
+                    position: fixed;
+                    width: 10rem;
+                    height: 10rem;
+                    border-radius: var(--radius-full);
+                    filter: blur(3rem);
+                    pointer-events: none;
+                }
+
+                .city-blur-1 {
+                    top: 50%;
+                    right: 0;
+                    transform: translateX(4rem);
+                    background: var(--accent-mint);
+                    opacity: 0.3;
+                }
+
+                .city-blur-2 {
+                    bottom: 25%;
+                    left: 0;
+                    transform: translateX(-4rem);
+                    background: var(--primary);
+                    opacity: 0.2;
+                }
+            `}</style>
+        </div>
+    );
+}

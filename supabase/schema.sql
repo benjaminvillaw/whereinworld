@@ -92,11 +92,49 @@ CREATE INDEX idx_sessions_token ON sessions(token);
 CREATE INDEX idx_sessions_user_id ON sessions(user_id);
 
 -- ============================================
+-- INVITES TABLE
+-- Stores invite codes/links for friend invitations
+-- ============================================
+CREATE TABLE invites (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    code TEXT UNIQUE NOT NULL,
+    phone_sent_to TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ,
+    accepted_at TIMESTAMPTZ,
+    accepted_by UUID REFERENCES users(id)
+);
+
+-- Index for invite lookups
+CREATE INDEX idx_invites_code ON invites(code);
+CREATE INDEX idx_invites_user_id ON invites(user_id);
+CREATE INDEX idx_invites_phone ON invites(phone_sent_to);
+
+-- ============================================
+-- FRIENDSHIPS TABLE
+-- Tracks mutual friend connections from invites
+-- ============================================
+CREATE TABLE friendships (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_a UUID REFERENCES users(id) ON DELETE CASCADE,
+    user_b UUID REFERENCES users(id) ON DELETE CASCADE,
+    created_via_invite UUID REFERENCES invites(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_a, user_b)
+);
+
+-- Index for friendship lookups
+CREATE INDEX idx_friendships_user_a ON friendships(user_a);
+CREATE INDEX idx_friendships_user_b ON friendships(user_b);
+
+-- ============================================
 -- FUNCTIONS
 -- ============================================
 
 -- Function to get friends with their locations
 -- Returns contacts who also have accounts, with location data
+-- Now also includes friends connected via friendships table
 CREATE OR REPLACE FUNCTION get_friends_with_locations(p_user_id UUID)
 RETURNS TABLE (
     id UUID,
@@ -111,6 +149,7 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
+    -- Friends via contacts (legacy method)
     SELECT 
         u.id,
         u.phone,
@@ -124,16 +163,36 @@ BEGIN
     FROM contacts c
     JOIN users u ON u.phone = c.contact_phone
     LEFT JOIN locations l ON l.user_id = u.id
-    WHERE c.user_id = p_user_id;
+    WHERE c.user_id = p_user_id
+    
+    UNION
+    
+    -- Friends via friendships (invite method)
+    SELECT 
+        u.id,
+        u.phone,
+        u.display_name,
+        u.avatar_url,
+        l.city,
+        l.country,
+        l.lat,
+        l.lng,
+        l.updated_at as location_updated_at
+    FROM friendships f
+    JOIN users u ON (u.id = f.user_b AND f.user_a = p_user_id) 
+                 OR (u.id = f.user_a AND f.user_b = p_user_id)
+    LEFT JOIN locations l ON l.user_id = u.id
+    WHERE f.user_a = p_user_id OR f.user_b = p_user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Function to clean up expired OTPs and sessions
+-- Function to clean up expired OTPs, sessions, and invites
 CREATE OR REPLACE FUNCTION cleanup_expired_records()
 RETURNS void AS $$
 BEGIN
     DELETE FROM otp_codes WHERE expires_at < NOW();
     DELETE FROM sessions WHERE expires_at < NOW();
+    DELETE FROM invites WHERE expires_at < NOW() AND accepted_at IS NULL;
 END;
 $$ LANGUAGE plpgsql;
 

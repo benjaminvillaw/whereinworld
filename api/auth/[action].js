@@ -1,5 +1,6 @@
 import twilio from 'twilio';
 import { createClient } from '@supabase/supabase-js';
+import { randomBytes, randomInt } from 'crypto';
 
 // Initialize Supabase
 const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY
@@ -12,13 +13,113 @@ const twilioClient = twilio(
     process.env.TWILIO_AUTH_TOKEN
 );
 
-// Helper functions
+// Check if test mode is enabled (only for development/testing)
+const TEST_MODE_ENABLED = process.env.ALLOW_TEST_BYPASS === 'true';
+
+// ============================================
+// RATE LIMITING (in-memory, per-instance)
+// For production, use Redis/Upstash for distributed rate limiting
+// ============================================
+const rateLimitStore = new Map();
+
+// Rate limit configuration (can be overridden via env vars)
+const RATE_LIMITS = {
+    sendOtp: {
+        maxAttempts: parseInt(process.env.RATE_LIMIT_OTP_SEND || '3', 10),
+        windowMs: parseInt(process.env.RATE_LIMIT_OTP_SEND_WINDOW || '3600000', 10), // 1 hour
+    },
+    verifyOtp: {
+        maxAttempts: parseInt(process.env.RATE_LIMIT_OTP_VERIFY || '5', 10),
+        windowMs: parseInt(process.env.RATE_LIMIT_OTP_VERIFY_WINDOW || '600000', 10), // 10 minutes
+    }
+};
+
+function checkRateLimit(key, limitConfig) {
+    const now = Date.now();
+    const record = rateLimitStore.get(key);
+
+    // Clean up old entries periodically
+    if (rateLimitStore.size > 10000) {
+        for (const [k, v] of rateLimitStore.entries()) {
+            if (now - v.firstAttempt > limitConfig.windowMs) {
+                rateLimitStore.delete(k);
+            }
+        }
+    }
+
+    if (!record || now - record.firstAttempt > limitConfig.windowMs) {
+        // First attempt or window expired
+        rateLimitStore.set(key, { attempts: 1, firstAttempt: now });
+        return { allowed: true, remaining: limitConfig.maxAttempts - 1 };
+    }
+
+    if (record.attempts >= limitConfig.maxAttempts) {
+        const resetIn = Math.ceil((record.firstAttempt + limitConfig.windowMs - now) / 1000);
+        return { allowed: false, resetIn };
+    }
+
+    record.attempts++;
+    return { allowed: true, remaining: limitConfig.maxAttempts - record.attempts };
+}
+
+// ============================================
+// INPUT VALIDATION
+// ============================================
+function validatePhone(phone) {
+    if (!phone || typeof phone !== 'string') {
+        return { valid: false, error: 'Phone number is required' };
+    }
+
+    // Remove all non-digits
+    const digits = phone.replace(/\D/g, '');
+
+    // Must be 10-15 digits (E.164 allows up to 15)
+    if (digits.length < 10 || digits.length > 15) {
+        return { valid: false, error: 'Phone number must be 10-15 digits' };
+    }
+
+    return { valid: true };
+}
+
+function validateDisplayName(name) {
+    if (!name || typeof name !== 'string') {
+        return { valid: false, error: 'Display name is required' };
+    }
+
+    const trimmed = name.trim();
+
+    if (trimmed.length < 1 || trimmed.length > 50) {
+        return { valid: false, error: 'Display name must be 1-50 characters' };
+    }
+
+    // Basic XSS prevention - remove HTML tags
+    const sanitized = trimmed.replace(/<[^>]*>/g, '');
+
+    return { valid: true, sanitized };
+}
+
+function validateOtpCode(code) {
+    if (!code || typeof code !== 'string') {
+        return { valid: false, error: 'Verification code is required' };
+    }
+
+    // Must be exactly 6 digits
+    if (!/^\d{6}$/.test(code)) {
+        return { valid: false, error: 'Verification code must be 6 digits' };
+    }
+
+    return { valid: true };
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
 function generateOtp() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return randomInt(100000, 999999).toString();
 }
 
 function generateToken() {
-    return 'sess_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    return 'sess_' + randomBytes(24).toString('hex');
 }
 
 function normalizePhone(phone) {
@@ -29,12 +130,19 @@ function normalizePhone(phone) {
     return '+' + digits;
 }
 
-// CORS headers
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+// CORS headers - restrict to allowed origins
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000').split(',');
+
+function getCorsHeaders(req) {
+    const origin = req.headers.origin || '';
+    const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+    return {
+        'Access-Control-Allow-Origin': allowedOrigin,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Credentials': 'true',
+    };
+}
 
 export default async function handler(req, res) {
     // Handle CORS preflight
@@ -43,6 +151,7 @@ export default async function handler(req, res) {
     }
 
     // Set CORS headers
+    const corsHeaders = getCorsHeaders(req);
     Object.entries(corsHeaders).forEach(([key, value]) => {
         res.setHeader(key, value);
     });
@@ -55,15 +164,18 @@ export default async function handler(req, res) {
         // ============================================
         if (action === 'send-otp' && req.method === 'POST') {
             const { phone } = req.body;
-            if (!phone) {
-                return res.status(400).json({ error: 'Phone number is required' });
+
+            // Validate phone number
+            const phoneValidation = validatePhone(phone);
+            if (!phoneValidation.valid) {
+                return res.status(400).json({ error: phoneValidation.error });
             }
 
             const normalizedPhone = normalizePhone(phone);
 
-            // TEST ACCOUNT BYPASS - Use phone: 5550001234 and code: 123456
-            if (normalizedPhone === '+15550001234') {
-                console.log('Test account detected, skipping SMS');
+            // TEST ACCOUNT BYPASS - Only enabled when ALLOW_TEST_BYPASS=true
+            if (TEST_MODE_ENABLED && normalizedPhone === '+15550001234') {
+                console.log('[TEST MODE] Test account detected, skipping SMS');
                 // Store test OTP in database if available
                 if (supabase) {
                     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -74,6 +186,16 @@ export default async function handler(req, res) {
                     });
                 }
                 return res.status(200).json({ success: true, phone: normalizedPhone, testMode: true });
+            }
+
+            // Rate limiting - check before sending SMS (protects Twilio costs)
+            const rateLimitKey = `send-otp:${normalizedPhone}`;
+            const rateCheck = checkRateLimit(rateLimitKey, RATE_LIMITS.sendOtp);
+            if (!rateCheck.allowed) {
+                return res.status(429).json({
+                    error: `Too many attempts. Please try again in ${rateCheck.resetIn} seconds.`,
+                    retryAfter: rateCheck.resetIn
+                });
             }
 
             // Check if Twilio is configured
@@ -113,16 +235,34 @@ export default async function handler(req, res) {
         // ============================================
         if (action === 'verify-otp' && req.method === 'POST') {
             const { phone, code } = req.body;
-            if (!phone || !code) {
-                return res.status(400).json({ error: 'Phone and code are required' });
+
+            // Validate inputs
+            const phoneValidation = validatePhone(phone);
+            if (!phoneValidation.valid) {
+                return res.status(400).json({ error: phoneValidation.error });
+            }
+
+            const codeValidation = validateOtpCode(code);
+            if (!codeValidation.valid) {
+                return res.status(400).json({ error: codeValidation.error });
             }
 
             const normalizedPhone = normalizePhone(phone);
 
-            // TEST ACCOUNT BYPASS - works without database
-            if (normalizedPhone === '+15550001234' && code === '123456') {
-                console.log('Test account verified, creating mock session');
-                const testToken = 'test_session_' + Date.now();
+            // Rate limiting - prevent brute force OTP guessing
+            const rateLimitKey = `verify-otp:${normalizedPhone}`;
+            const rateCheck = checkRateLimit(rateLimitKey, RATE_LIMITS.verifyOtp);
+            if (!rateCheck.allowed) {
+                return res.status(429).json({
+                    error: `Too many verification attempts. Please try again in ${rateCheck.resetIn} seconds.`,
+                    retryAfter: rateCheck.resetIn
+                });
+            }
+
+            // TEST ACCOUNT BYPASS - Only enabled when ALLOW_TEST_BYPASS=true
+            if (TEST_MODE_ENABLED && normalizedPhone === '+15550001234' && code === '123456') {
+                console.log('[TEST MODE] Test account verified, creating mock session');
+                const testToken = 'test_session_' + randomBytes(16).toString('hex');
                 // Store in global for session lookup (serverless-safe within same instance)
                 global.testSessions = global.testSessions || {};
                 global.testSessions[testToken] = {
@@ -188,17 +328,15 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: 'Not authenticated' });
             }
 
-            // TEST ACCOUNT SESSION - works without database
-            if (token.startsWith('test_session_')) {
+            // TEST ACCOUNT SESSION - Only enabled when ALLOW_TEST_BYPASS=true
+            if (TEST_MODE_ENABLED && token.startsWith('test_session_')) {
                 global.testSessions = global.testSessions || {};
                 const testUser = global.testSessions[token];
                 if (testUser) {
                     return res.status(200).json({ user: testUser });
                 }
-                // Even if not in memory, accept any test_session_ token
-                return res.status(200).json({
-                    user: { id: 'test-user-001', phone: '+15550001234', displayName: 'Test User' }
-                });
+                // Return unauthorized if test session not found (more secure)
+                return res.status(401).json({ error: 'Session expired' });
             }
 
             if (supabase) {
@@ -232,15 +370,22 @@ export default async function handler(req, res) {
                 return res.status(400).json({ error: 'Missing required fields' });
             }
 
-            // TEST ACCOUNT - works without database
-            if (token.startsWith('test_session_') || userId === 'test-user-001') {
+            // Validate and sanitize display name
+            const nameValidation = validateDisplayName(displayName);
+            if (!nameValidation.valid) {
+                return res.status(400).json({ error: nameValidation.error });
+            }
+            const sanitizedName = nameValidation.sanitized;
+
+            // TEST ACCOUNT - Only enabled when ALLOW_TEST_BYPASS=true
+            if (TEST_MODE_ENABLED && (token.startsWith('test_session_') || userId === 'test-user-001')) {
                 global.testSessions = global.testSessions || {};
                 if (global.testSessions[token]) {
-                    global.testSessions[token].displayName = displayName;
+                    global.testSessions[token].displayName = sanitizedName;
                 }
                 return res.status(200).json({
                     success: true,
-                    user: { id: 'test-user-001', phone: '+15550001234', displayName }
+                    user: { id: 'test-user-001', phone: '+15550001234', displayName: sanitizedName }
                 });
             }
 
@@ -259,7 +404,7 @@ export default async function handler(req, res) {
                 // Update user
                 const { data: user } = await supabase
                     .from('users')
-                    .update({ display_name: displayName })
+                    .update({ display_name: sanitizedName })
                     .eq('id', userId)
                     .select()
                     .single();
@@ -298,7 +443,8 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Not found' });
 
     } catch (error) {
-        console.error('API Error:', error);
-        return res.status(500).json({ error: error.message });
+        console.error('Auth API Error:', error);
+        // Don't expose internal error details to clients
+        return res.status(500).json({ error: 'An unexpected error occurred. Please try again.' });
     }
 }

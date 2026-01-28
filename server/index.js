@@ -3,6 +3,7 @@ import cors from 'cors';
 import twilio from 'twilio';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { randomBytes, randomInt } from 'crypto';
 
 dotenv.config();
 
@@ -40,14 +41,14 @@ const memoryStore = {
     contacts: new Map()
 };
 
-// Generate session token
+// Generate session token using cryptographically secure random
 function generateToken() {
-    return 'sess_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    return 'sess_' + randomBytes(24).toString('hex');
 }
 
-// Generate 6-digit OTP
+// Generate 6-digit OTP using cryptographically secure random
 function generateOtp() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    return randomInt(100000, 999999).toString();
 }
 
 // Normalize phone to E.164

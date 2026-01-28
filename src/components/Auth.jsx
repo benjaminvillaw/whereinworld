@@ -9,7 +9,7 @@ export function Auth({ onAuthenticated }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
-  const [verifiedUser, setVerifiedUser] = useState(null); // Store user after OTP success
+  const [verifiedUser, setVerifiedUser] = useState(null);
 
   const otpRefs = useRef([]);
 
@@ -37,7 +37,6 @@ export function Auth({ onAuthenticated }) {
         newOtp[i] = pasted[i];
       }
       setOtp(newOtp);
-      // Focus last filled input or submit
       const nextIndex = Math.min(pasted.length, 5);
       otpRefs.current[nextIndex]?.focus();
     }
@@ -85,19 +84,14 @@ export function Auth({ onAuthenticated }) {
 
     try {
       if (step === 'phone') {
-        // Send OTP
         const result = await api.sendOtp(phone);
-
         if (result.demoMode) {
-          // Demo mode: skip OTP, go to name step
           setStep('name');
         } else {
-          // Real mode: proceed to OTP entry
           setStep('otp');
           startResendTimer();
         }
       } else if (step === 'otp') {
-        // Verify OTP
         const code = otp.join('');
         if (code.length !== 6) {
           setError('Please enter the 6-digit code');
@@ -105,18 +99,14 @@ export function Auth({ onAuthenticated }) {
           return;
         }
 
-        // Verify OTP and get/create user
         const user = await api.verifyOtp(phone, code);
         if (user.displayName) {
-          // Existing user with name, log them in
           onAuthenticated(user);
         } else {
-          // New user without name, save user and ask for name
           setVerifiedUser(user);
           setStep('name');
         }
       } else if (step === 'name') {
-        // Update user with their name
         const updatedUser = await api.updateUserName(verifiedUser.id, name);
         onAuthenticated(updatedUser);
       }
@@ -129,10 +119,14 @@ export function Auth({ onAuthenticated }) {
 
   return (
     <div className="auth-container">
-      <div className="auth-card glass-card slide-up">
+      <div className="auth-card animate-slide-up">
         {/* Logo */}
         <div className="auth-logo">
-          <div className="logo-icon">🌍</div>
+          <div className="logo-icon">
+            <span className="material-symbols-outlined" style={{ fontSize: '4rem', color: 'var(--primary)' }}>
+              public
+            </span>
+          </div>
           <h1 className="logo-text">Where In World</h1>
           <p className="logo-tagline">See where your friends are</p>
         </div>
@@ -158,7 +152,7 @@ export function Auth({ onAuthenticated }) {
               </div>
               <button
                 type="submit"
-                className="btn btn-primary full-width"
+                className="btn btn-primary"
                 disabled={loading || !phone.trim()}
               >
                 {loading ? 'Sending...' : 'Continue'}
@@ -170,7 +164,7 @@ export function Auth({ onAuthenticated }) {
             <>
               <div className="form-group">
                 <label className="form-label">Enter verification code</label>
-                <p className="form-hint" style={{ marginBottom: '16px' }}>
+                <p className="form-hint" style={{ marginBottom: '1rem' }}>
                   We sent a 6-digit code to {phone}
                 </p>
                 <div className="otp-inputs" onPaste={handleOtpPaste}>
@@ -192,14 +186,14 @@ export function Auth({ onAuthenticated }) {
               </div>
               <button
                 type="submit"
-                className="btn btn-primary full-width"
+                className="btn btn-primary"
                 disabled={loading || otp.join('').length !== 6}
               >
                 {loading ? 'Verifying...' : 'Verify Code'}
               </button>
               <button
                 type="button"
-                className="btn btn-ghost full-width"
+                className="btn btn-ghost"
                 onClick={handleResend}
                 disabled={loading || resendTimer > 0}
               >
@@ -207,7 +201,7 @@ export function Auth({ onAuthenticated }) {
               </button>
               <button
                 type="button"
-                className="btn btn-ghost full-width"
+                className="btn btn-ghost"
                 onClick={() => { setStep('phone'); setOtp(['', '', '', '', '', '']); }}
               >
                 Change number
@@ -234,7 +228,7 @@ export function Auth({ onAuthenticated }) {
               </div>
               <button
                 type="submit"
-                className="btn btn-primary full-width"
+                className="btn btn-primary"
                 disabled={loading || !name.trim()}
               >
                 {loading ? 'Setting up...' : 'Get Started'}
@@ -244,6 +238,7 @@ export function Auth({ onAuthenticated }) {
 
           {error && (
             <div className="error-message">
+              <span className="material-symbols-outlined" style={{ fontSize: '1.25rem' }}>error</span>
               {error}
             </div>
           )}
@@ -252,24 +247,24 @@ export function Auth({ onAuthenticated }) {
         {/* Demo mode notice */}
         {isDemoMode() && (
           <div className="demo-notice">
-            <span className="demo-badge">Demo Mode</span>
+            <span className="badge-primary">Demo Mode</span>
             <span className="text-muted text-sm">No real SMS verification</span>
           </div>
         )}
       </div>
 
       {/* Features */}
-      <div className="auth-features fade-in">
+      <div className="auth-features animate-fade-in">
         <div className="feature">
-          <span className="feature-icon">🔒</span>
+          <span className="material-symbols-outlined feature-icon">lock</span>
           <span>Privacy-first: Only city-level location</span>
         </div>
         <div className="feature">
-          <span className="feature-icon">👥</span>
+          <span className="material-symbols-outlined feature-icon">group</span>
           <span>Connect with existing contacts</span>
         </div>
         <div className="feature">
-          <span className="feature-icon">📍</span>
+          <span className="material-symbols-outlined feature-icon">location_on</span>
           <span>Know when friends are nearby</span>
         </div>
       </div>
@@ -281,27 +276,26 @@ export function Auth({ onAuthenticated }) {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 40px 20px;
-          background: 
-            radial-gradient(ellipse at top, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
-            radial-gradient(ellipse at bottom, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-            var(--bg-primary);
+          padding: 2.5rem 1.5rem;
+          background: var(--background-dark);
         }
         
         .auth-card {
           width: 100%;
-          max-width: 400px;
-          padding: 40px;
+          max-width: 24rem;
+          padding: 2.5rem;
+          background: var(--surface-dark);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: var(--radius-3xl);
         }
         
         .auth-logo {
           text-align: center;
-          margin-bottom: 32px;
+          margin-bottom: 2rem;
         }
         
         .logo-icon {
-          font-size: 56px;
-          margin-bottom: 16px;
+          margin-bottom: 1rem;
           animation: float 3s ease-in-out infinite;
         }
         
@@ -311,133 +305,122 @@ export function Auth({ onAuthenticated }) {
         }
         
         .logo-text {
-          font-size: 28px;
-          font-weight: 800;
-          background: var(--accent-gradient);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          margin: 0 0 8px 0;
+          font-size: 1.75rem;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: -0.02em;
+          color: var(--text-primary);
+          margin: 0 0 0.5rem 0;
         }
         
         .logo-tagline {
           color: var(--text-secondary);
+          font-weight: 500;
           margin: 0;
         }
         
         .auth-form {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 1rem;
         }
         
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 0.5rem;
         }
         
         .form-label {
-          font-weight: 600;
+          font-weight: 700;
+          font-size: 0.875rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
           color: var(--text-primary);
         }
         
         .form-hint {
-          font-size: 13px;
+          font-size: 0.8125rem;
           color: var(--text-muted);
           margin: 0;
         }
         
-        .full-width {
-          width: 100%;
-        }
-        
-        .verify-message {
-          text-align: center;
-          padding: 20px 0;
-        }
-        
-        .verify-icon {
-          font-size: 48px;
-          margin-bottom: 16px;
-        }
-        
         .error-message {
-          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
           background: rgba(239, 68, 68, 0.1);
-          border: 1px solid rgba(239, 68, 68, 0.3);
-          border-radius: var(--radius-md);
+          border: 2px solid rgba(239, 68, 68, 0.3);
+          border-radius: var(--radius-xl);
           color: var(--danger);
-          font-size: 14px;
+          font-size: 0.875rem;
+          font-weight: 600;
         }
         
         .demo-notice {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 10px;
-          margin-top: 24px;
-          padding-top: 24px;
-          border-top: 1px solid var(--border-subtle);
-        }
-        
-        .demo-badge {
-          background: var(--accent-gradient);
-          color: white;
-          padding: 4px 10px;
-          border-radius: var(--radius-full);
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
+          gap: 0.75rem;
+          margin-top: 1.5rem;
+          padding-top: 1.5rem;
+          border-top: 1px solid rgba(255,255,255,0.1);
         }
         
         .auth-features {
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          margin-top: 32px;
-          max-width: 400px;
+          gap: 0.75rem;
+          margin-top: 2rem;
+          max-width: 24rem;
         }
         
         .feature {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 0.75rem;
           color: var(--text-secondary);
-          font-size: 14px;
+          font-size: 0.875rem;
+          font-weight: 500;
         }
         
         .feature-icon {
-          font-size: 20px;
+          font-size: 1.25rem;
+          color: var(--accent-mint);
         }
         
         .otp-inputs {
           display: flex;
-          gap: 8px;
+          gap: 0.5rem;
           justify-content: center;
         }
         
         .otp-input {
-          width: 48px;
-          height: 56px;
+          width: 3rem;
+          height: 3.5rem;
           text-align: center;
-          font-size: 24px;
-          font-weight: 700;
-          border: 2px solid var(--border-subtle);
-          border-radius: var(--radius-md);
-          background: var(--bg-secondary);
+          font-size: 1.5rem;
+          font-weight: 800;
+          border: 2px solid var(--surface-border);
+          border-radius: var(--radius-lg);
+          background: var(--background-dark);
           color: var(--text-primary);
           transition: all var(--transition-fast);
         }
         
         .otp-input:focus {
           outline: none;
-          border-color: var(--accent-primary);
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+          border-color: var(--primary);
+          box-shadow: var(--shadow-glow-primary);
         }
         
         .otp-input:hover:not(:focus) {
           border-color: var(--text-muted);
+        }
+
+        .btn {
+          width: 100%;
         }
       `}</style>
     </div>

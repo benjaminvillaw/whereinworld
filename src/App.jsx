@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { WorldMap } from './components/WorldMap';
+import { CityList } from './components/CityList';
+import { CityDetail } from './components/CityDetail';
 import { FriendsList } from './components/FriendsList';
 import { Auth } from './components/Auth';
 import { ContactSync } from './components/ContactSync';
+import { InviteFriends } from './components/InviteFriends';
+import { Settings } from './components/Settings';
+import { BottomNav } from './components/BottomNav';
 import { EngagementBanners } from './components/EngagementBanners';
 import { updateStreak } from './lib/streak';
 import { useLocation } from './hooks/useLocation';
@@ -14,8 +18,12 @@ function App() {
   const [user, setUser] = useState(null);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('map'); // 'map', 'list', 'settings'
+  const [activeTab, setActiveTab] = useState('grid'); // 'grid', 'map', 'chat', 'profile'
+  const [selectedCity, setSelectedCity] = useState(null);
   const [showContactSync, setShowContactSync] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [ghostMode, setGhostMode] = useState(false);
 
   const { location, requestLocation, permission, loading: locationLoading } = useLocation();
 
@@ -44,21 +52,21 @@ function App() {
 
   // Update location when app becomes visible
   const handleVisibilityUpdate = useCallback(async () => {
-    if (user && permission === 'granted') {
+    if (user && permission === 'granted' && !ghostMode) {
       const loc = await requestLocation();
       if (loc) {
         await api.updateLocation(loc);
         updateStreak();
-        loadFriends(); // Refresh friends too
+        loadFriends();
       }
     }
-  }, [user, permission, requestLocation, loadFriends]);
+  }, [user, permission, requestLocation, loadFriends, ghostMode]);
 
   useVisibilityUpdate(handleVisibilityUpdate);
 
   // Initial location request after auth
   useEffect(() => {
-    if (user && !location) {
+    if (user && !location && !ghostMode) {
       requestLocation().then(async (loc) => {
         if (loc) {
           await api.updateLocation(loc);
@@ -66,7 +74,7 @@ function App() {
         }
       });
     }
-  }, [user, location, requestLocation]);
+  }, [user, location, requestLocation, ghostMode]);
 
   // Handle authentication
   const handleAuthenticated = async (authUser) => {
@@ -106,19 +114,25 @@ function App() {
     if (!currentUser) return;
 
     const demoFriends = [
-      { id: 'demo_1', phone: '+1555123001', displayName: 'Alex Chen' },
-      { id: 'demo_2', phone: '+1555123002', displayName: 'Jordan Smith' },
-      { id: 'demo_3', phone: '+1555123003', displayName: 'Taylor Brown' },
-      { id: 'demo_4', phone: '+1555123004', displayName: 'Sam Wilson' },
-      { id: 'demo_5', phone: '+1555123005', displayName: 'Morgan Lee' }
+      { id: 'demo_1', phone: '+1555123001', displayName: 'Felix Chen' },
+      { id: 'demo_2', phone: '+1555123002', displayName: 'Sarah Jenkins' },
+      { id: 'demo_3', phone: '+1555123003', displayName: 'Marcus Wright' },
+      { id: 'demo_4', phone: '+1555123004', displayName: 'Elena Rossi' },
+      { id: 'demo_5', phone: '+1555123005', displayName: 'Alex Chen' },
+      { id: 'demo_6', phone: '+1555123006', displayName: 'Jordan Smith' },
+      { id: 'demo_7', phone: '+1555123007', displayName: 'Taylor Brown' },
+      { id: 'demo_8', phone: '+1555123008', displayName: 'Sam Wilson' }
     ];
 
     const demoLocations = [
-      { city: 'San Francisco', country: 'United States', lat: 37.77, lng: -122.43 },
-      { city: 'New York', country: 'United States', lat: 40.71, lng: -74.01 },
-      { city: 'London', country: 'United Kingdom', lat: 51.51, lng: -0.12 },
-      { city: 'Tokyo', country: 'Japan', lat: 35.68, lng: 139.69 },
-      { city: 'Paris', country: 'France', lat: 48.86, lng: 2.35 }
+      { city: 'London', country: 'United Kingdom', lat: 51.51, lng: -0.12, neighborhood: 'Soho' },
+      { city: 'London', country: 'United Kingdom', lat: 51.50, lng: -0.11, neighborhood: 'Southbank' },
+      { city: 'London', country: 'United Kingdom', lat: 51.52, lng: -0.08, neighborhood: 'Shoreditch' },
+      { city: 'London', country: 'United Kingdom', lat: 51.51, lng: -0.15, neighborhood: 'Mayfair' },
+      { city: 'Tokyo', country: 'Japan', lat: 35.68, lng: 139.69, neighborhood: 'Shibuya' },
+      { city: 'New York', country: 'United States', lat: 40.71, lng: -74.01, neighborhood: 'SoHo' },
+      { city: 'Paris', country: 'France', lat: 48.86, lng: 2.35, neighborhood: 'Le Marais' },
+      { city: 'San Francisco', country: 'United States', lat: 37.77, lng: -122.43, neighborhood: 'Mission' }
     ];
 
     // Create demo users and their locations
@@ -130,10 +144,10 @@ function App() {
       await localBackend.createUser(friend);
 
       // Add their location with varying freshness
-      const hoursAgo = [2, 12, 36, 60, 4][i];
+      const minutesAgo = [2, 5, 120, 3, 720, 240, 1440, 30][i];
       await localBackend.updateLocation(friend.id, {
         ...location,
-        updatedAt: new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString()
+        updatedAt: new Date(Date.now() - minutesAgo * 60 * 1000).toISOString()
       });
     }
 
@@ -159,12 +173,22 @@ function App() {
     setFriends([]);
   };
 
+  // Handle tab changes
+  const handleTabChange = (tab) => {
+    if (tab === 'profile') {
+      setShowSettings(true);
+    } else {
+      setActiveTab(tab);
+      setSelectedCity(null);
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
       <div className="loading-screen">
         <div className="loading-spinner"></div>
-        <p>Loading...</p>
+        <p className="font-bold uppercase tracking-wide">Loading...</p>
       </div>
     );
   }
@@ -178,10 +202,10 @@ function App() {
   if (showContactSync) {
     return (
       <div className="modal-overlay">
-        <div className="modal glass-card slide-up">
+        <div className="modal glass-card animate-slide-up p-6">
           <ContactSync onSync={handleContactSync} />
           <button
-            className="btn btn-ghost"
+            className="btn btn-secondary w-full mt-4"
             onClick={() => {
               setShowContactSync(false);
               if (isDemoMode()) createDemoFriends().then(loadFriends);
@@ -194,112 +218,79 @@ function App() {
     );
   }
 
+  // Settings view
+  if (showSettings) {
+    return (
+      <Settings
+        onBack={() => setShowSettings(false)}
+        ghostMode={ghostMode}
+        onGhostModeChange={setGhostMode}
+      />
+    );
+  }
+
+  // City detail view
+  if (selectedCity) {
+    return (
+      <CityDetail
+        city={selectedCity}
+        onBack={() => setSelectedCity(null)}
+      />
+    );
+  }
+
   return (
     <div className="app">
-      {/* Header */}
-      <header className="app-header glass-card">
-        <div className="header-left">
-          <span className="logo-mini">🌍</span>
-          <span className="logo-text-mini">Where In World</span>
+      {/* Invite Modal */}
+      {showInvite && (
+        <div className="modal-overlay" onClick={() => setShowInvite(false)}>
+          <div className="modal glass-card animate-slide-up p-6" onClick={e => e.stopPropagation()}>
+            <InviteFriends
+              onClose={() => setShowInvite(false)}
+              onInviteSent={loadFriends}
+            />
+          </div>
         </div>
-
-        <div className="header-location">
-          {location ? (
-            <span className="current-location">
-              📍 {location.city}, {location.country}
-            </span>
-          ) : (
-            <button
-              className="btn btn-ghost"
-              onClick={requestLocation}
-              disabled={locationLoading}
-            >
-              {locationLoading ? 'Getting location...' : 'Enable Location'}
-            </button>
-          )}
-        </div>
-
-        <div className="header-right">
-          <button
-            className="icon-btn"
-            onClick={() => setShowContactSync(true)}
-            title="Sync Contacts"
-          >
-            👥
-          </button>
-          <button
-            className="icon-btn"
-            onClick={handleSignOut}
-            title="Sign Out"
-          >
-            🚪
-          </button>
-        </div>
-      </header>
-
-      {/* Engagement Banners */}
-      <EngagementBanners
-        friends={friends}
-        userLocation={location}
-        lastLocationUpdate={location?.updatedAt}
-        onUpdateLocation={handleUpdateLocation}
-      />
+      )}
 
       {/* Main Content */}
       <main className="app-main">
-        <div className="content-grid">
-          {/* Map Panel */}
-          <div className="map-panel glass-card">
-            <WorldMap
-              friends={friends}
-              userLocation={location}
-              onSelectFriend={(friend) => console.log('Selected:', friend)}
-            />
-          </div>
+        {activeTab === 'grid' && (
+          <CityList
+            friends={ghostMode ? [] : friends}
+            userLocation={location}
+            onSelectCity={setSelectedCity}
+            onSelectFriend={(friend) => console.log('Selected:', friend)}
+          />
+        )}
 
-          {/* Friends Panel */}
-          <div className="friends-panel">
-            <FriendsList
-              friends={friends}
-              userLocation={location}
-              onSelectFriend={(friend) => console.log('Selected:', friend)}
-            />
+        {activeTab === 'map' && (
+          <div className="map-placeholder">
+            <span className="material-symbols-outlined" style={{ fontSize: '4rem', opacity: 0.3 }}>map</span>
+            <p className="font-bold uppercase mt-4" style={{ color: 'var(--text-muted)' }}>Map View Coming Soon</p>
           </div>
-        </div>
+        )}
+
+        {activeTab === 'chat' && (
+          <div className="map-placeholder">
+            <span className="material-symbols-outlined" style={{ fontSize: '4rem', opacity: 0.3 }}>chat_bubble</span>
+            <p className="font-bold uppercase mt-4" style={{ color: 'var(--text-muted)' }}>Chat Coming Soon</p>
+          </div>
+        )}
       </main>
 
-      {/* Mobile Navigation */}
-      <nav className="mobile-nav glass-card">
-        <button
-          className={`nav-btn ${view === 'map' ? 'active' : ''}`}
-          onClick={() => setView('map')}
-        >
-          <span>🗺️</span>
-          <span>Map</span>
-        </button>
-        <button
-          className={`nav-btn ${view === 'list' ? 'active' : ''}`}
-          onClick={() => setView('list')}
-        >
-          <span>👥</span>
-          <span>Friends</span>
-        </button>
-        <button
-          className="nav-btn update-btn"
-          onClick={handleUpdateLocation}
-          disabled={locationLoading}
-        >
-          <span>📍</span>
-          <span>Update</span>
-        </button>
-      </nav>
+      {/* Bottom Navigation */}
+      <BottomNav
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
 
       <style>{`
         .app {
           display: flex;
           flex-direction: column;
-          height: 100vh;
-          background: var(--bg-primary);
+          min-height: 100vh;
+          background: var(--background-dark);
         }
         
         .loading-screen {
@@ -308,14 +299,16 @@ function App() {
           align-items: center;
           justify-content: center;
           height: 100vh;
-          gap: 16px;
+          gap: 1rem;
+          background: var(--background-dark);
+          color: var(--text-primary);
         }
         
         .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 3px solid var(--bg-tertiary);
-          border-top-color: var(--accent-primary);
+          width: 3rem;
+          height: 3rem;
+          border: 4px solid var(--surface-border);
+          border-top-color: var(--primary);
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
@@ -324,165 +317,37 @@ function App() {
           to { transform: rotate(360deg); }
         }
         
-        /* Header */
-        .app-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 12px 20px;
-          margin: 12px;
-          border-radius: var(--radius-lg);
-        }
-        
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        
-        .logo-mini {
-          font-size: 28px;
-        }
-        
-        .logo-text-mini {
-          font-size: 18px;
-          font-weight: 800;
-          background: var(--accent-gradient);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-        
-        .current-location {
-          font-size: 14px;
-          color: var(--text-secondary);
-        }
-        
-        .header-right {
-          display: flex;
-          gap: 8px;
-        }
-        
-        .icon-btn {
-          width: 40px;
-          height: 40px;
-          border: none;
-          background: var(--bg-tertiary);
-          border-radius: var(--radius-md);
-          font-size: 18px;
-          cursor: pointer;
-          transition: background var(--transition-fast);
-        }
-        
-        .icon-btn:hover {
-          background: var(--bg-glass-hover);
-        }
-        
-        /* Main Content */
         .app-main {
           flex: 1;
-          padding: 0 12px 12px;
           overflow: hidden;
         }
         
-        .content-grid {
-          display: grid;
-          grid-template-columns: 1fr 380px;
-          gap: 12px;
-          height: 100%;
-        }
-        
-        .map-panel {
-          overflow: hidden;
-          padding: 0;
-        }
-        
-        .friends-panel {
-          overflow: hidden;
-        }
-        
-        /* Mobile Navigation */
-        .mobile-nav {
-          display: none;
-          padding: 8px 20px 20px;
-          margin: 0 12px 12px;
-          border-radius: var(--radius-lg);
-        }
-        
-        .nav-btn {
+        .map-placeholder {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
-          flex: 1;
-          padding: 10px;
-          background: transparent;
-          border: none;
+          justify-content: center;
+          height: 100vh;
           color: var(--text-muted);
-          font-size: 11px;
-          cursor: pointer;
-          transition: all var(--transition-fast);
-        }
-        
-        .nav-btn span:first-child {
-          font-size: 22px;
-        }
-        
-        .nav-btn.active {
-          color: var(--accent-primary);
-        }
-        
-        .nav-btn.update-btn {
-          background: var(--accent-gradient);
-          color: white;
-          border-radius: var(--radius-md);
         }
         
         /* Modal */
         .modal-overlay {
           position: fixed;
           inset: 0;
-          background: rgba(0, 0, 0, 0.8);
+          background: rgba(0, 0, 0, 0.9);
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px;
+          padding: 1.5rem;
           z-index: 1000;
         }
         
         .modal {
           width: 100%;
-          max-width: 420px;
+          max-width: 26rem;
           max-height: 80vh;
           overflow-y: auto;
-        }
-        
-        /* Responsive */
-        @media (max-width: 900px) {
-          .content-grid {
-            grid-template-columns: 1fr;
-          }
-          
-          .friends-panel {
-            display: none;
-          }
-          
-          .mobile-nav {
-            display: flex;
-          }
-          
-          .app-main {
-            padding-bottom: 100px;
-          }
-        }
-        
-        @media (max-width: 600px) {
-          .header-location {
-            display: none;
-          }
-          
-          .logo-text-mini {
-            display: none;
-          }
         }
       `}</style>
     </div>

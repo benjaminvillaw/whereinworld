@@ -337,6 +337,93 @@ export const api = {
     async getContacts() {
         const cached = localStorage.getItem('whereinworld_contacts');
         return cached ? JSON.parse(cached) : [];
+    },
+
+    // ============================================
+    // INVITE API METHODS
+    // ============================================
+
+    async createInvite() {
+        if (hasBackend) {
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/invite/create`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to create invite');
+            return data;
+        }
+        // Demo mode: generate mock invite
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        return {
+            success: true,
+            invite: {
+                code,
+                url: `${window.location.origin}/join/${code}`,
+                createdAt: new Date().toISOString()
+            }
+        };
+    },
+
+    async sendInviteSms(phone) {
+        if (hasBackend) {
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/invite/send-sms`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ phone })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to send invite');
+            return data;
+        }
+        // Demo mode: just return success
+        return { success: true, testMode: true };
+    },
+
+    async lookupInvite(code) {
+        const res = await fetch(`${API_URL}/api/invite/lookup?code=${code}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Invalid invite');
+        return data;
+    },
+
+    async acceptInvite(code) {
+        if (hasBackend) {
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/invite/accept`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ code })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to accept invite');
+            return data;
+        }
+        return { success: true };
+    },
+
+    async getMyInvites() {
+        if (hasBackend) {
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/invite/my-invites`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to get invites');
+            return data.invites || [];
+        }
+        return [];
     }
 };
 
