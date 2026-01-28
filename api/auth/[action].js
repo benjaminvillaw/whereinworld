@@ -98,12 +98,21 @@ export default async function handler(req, res) {
                 body: `Your Where In World code is: ${code}\n\nExpires in 10 minutes.`
             };
 
+            // Debug logging - remove after fixing
+            console.log('Twilio credentials check:', {
+                accountSid: process.env.TWILIO_ACCOUNT_SID?.substring(0, 10) + '...',
+                authTokenLength: process.env.TWILIO_AUTH_TOKEN?.length,
+                messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID,
+                messagingServiceSidLength: process.env.TWILIO_MESSAGING_SERVICE_SID?.length
+            });
+
             if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
                 messageOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
             } else {
                 messageOptions.from = process.env.TWILIO_PHONE_NUMBER;
             }
 
+            console.log('Sending message with options:', JSON.stringify(messageOptions, null, 2));
             await twilioClient.messages.create(messageOptions);
             return res.status(200).json({ success: true, phone: normalizedPhone });
         }
