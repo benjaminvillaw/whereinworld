@@ -6,13 +6,14 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://demo.supabase
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'demo-key';
 
 // Backend API URL for Twilio auth
-// In production (Vercel), use relative path. In dev, use localhost server.
-const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
+// In production (Vercel), always use relative path (empty string)
+// In dev, optionally use VITE_API_URL if you have a separate backend server
+const API_URL = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL || '');
 
 // Only create real client if we have valid credentials
 const hasValidCredentials = SUPABASE_URL !== 'https://demo.supabase.co';
 // In production, always use backend API (serverless functions at /api)
-const hasBackend = !!API_URL || import.meta.env.PROD;
+const hasBackend = import.meta.env.PROD || !!API_URL;
 
 export const supabase = hasValidCredentials
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
