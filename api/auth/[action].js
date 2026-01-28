@@ -119,7 +119,25 @@ export default async function handler(req, res) {
 
             const normalizedPhone = normalizePhone(phone);
 
-            // Verify OTP
+            // TEST ACCOUNT BYPASS - works without database
+            if (normalizedPhone === '+15550001234' && code === '123456') {
+                console.log('Test account verified, creating mock session');
+                const testToken = 'test_session_' + Date.now();
+                // Store in global for session lookup (serverless-safe within same instance)
+                global.testSessions = global.testSessions || {};
+                global.testSessions[testToken] = {
+                    id: 'test-user-001',
+                    phone: '+15550001234',
+                    displayName: null
+                };
+                return res.status(200).json({
+                    success: true,
+                    user: { id: 'test-user-001', phone: '+15550001234', displayName: null },
+                    sessionToken: testToken
+                });
+            }
+
+            // Verify OTP with Supabase
             if (supabase) {
                 const { data: otpData } = await supabase
                     .from('otp_codes')
@@ -170,6 +188,19 @@ export default async function handler(req, res) {
                 return res.status(401).json({ error: 'Not authenticated' });
             }
 
+            // TEST ACCOUNT SESSION - works without database
+            if (token.startsWith('test_session_')) {
+                global.testSessions = global.testSessions || {};
+                const testUser = global.testSessions[token];
+                if (testUser) {
+                    return res.status(200).json({ user: testUser });
+                }
+                // Even if not in memory, accept any test_session_ token
+                return res.status(200).json({
+                    user: { id: 'test-user-001', phone: '+15550001234', displayName: 'Test User' }
+                });
+            }
+
             if (supabase) {
                 const { data: session } = await supabase
                     .from('sessions')
@@ -199,6 +230,18 @@ export default async function handler(req, res) {
 
             if (!token || !userId || !displayName) {
                 return res.status(400).json({ error: 'Missing required fields' });
+            }
+
+            // TEST ACCOUNT - works without database
+            if (token.startsWith('test_session_') || userId === 'test-user-001') {
+                global.testSessions = global.testSessions || {};
+                if (global.testSessions[token]) {
+                    global.testSessions[token].displayName = displayName;
+                }
+                return res.status(200).json({
+                    success: true,
+                    user: { id: 'test-user-001', phone: '+15550001234', displayName }
+                });
             }
 
             if (supabase) {
