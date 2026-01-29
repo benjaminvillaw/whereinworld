@@ -555,6 +555,9 @@ export default async function handler(req, res) {
         if (twilioErrorCode === 21704) {
             return res.status(500).json({ error: 'Messaging Service has no phone numbers configured.' });
         }
+        if (twilioErrorCode === 21705) {
+            return res.status(500).json({ error: 'Messaging Service is invalid or has no phone numbers. Check TWILIO_MESSAGING_SERVICE_SID.' });
+        }
         if (twilioErrorCode === 21710) {
             return res.status(500).json({ error: 'Messaging Service not found.' });
         }
