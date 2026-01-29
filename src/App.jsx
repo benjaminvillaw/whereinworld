@@ -7,6 +7,7 @@ import { ContactSync } from './components/ContactSync';
 import { InviteFriends } from './components/InviteFriends';
 import { Settings } from './components/Settings';
 import { BottomNav } from './components/BottomNav';
+import { MapView } from './components/MapView';
 import { EngagementBanners } from './components/EngagementBanners';
 import { updateStreak } from './lib/streak';
 import { useLocation } from './hooks/useLocation';
@@ -24,6 +25,7 @@ function App() {
   const [showInvite, setShowInvite] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [ghostMode, setGhostMode] = useState(false);
+  const [notificationsMuted, setNotificationsMuted] = useState(false);
   const [arrivals, setArrivals] = useState([]); // Track friend arrivals for notifications
 
   // Track previous friend locations to detect changes
@@ -149,14 +151,14 @@ function App() {
     if (!currentUser) return;
 
     const demoFriends = [
-      { id: 'demo_1', phone: '+1555123001', displayName: 'Felix Chen' },
-      { id: 'demo_2', phone: '+1555123002', displayName: 'Sarah Jenkins' },
-      { id: 'demo_3', phone: '+1555123003', displayName: 'Marcus Wright' },
-      { id: 'demo_4', phone: '+1555123004', displayName: 'Elena Rossi' },
-      { id: 'demo_5', phone: '+1555123005', displayName: 'Alex Chen' },
-      { id: 'demo_6', phone: '+1555123006', displayName: 'Jordan Smith' },
-      { id: 'demo_7', phone: '+1555123007', displayName: 'Taylor Brown' },
-      { id: 'demo_8', phone: '+1555123008', displayName: 'Sam Wilson' }
+      { id: 'demo_1', phone: '+1555123001', displayName: 'Felix Chen', avatar_url: 'https://randomuser.me/api/portraits/men/32.jpg' },
+      { id: 'demo_2', phone: '+1555123002', displayName: 'Sarah Jenkins', avatar_url: 'https://randomuser.me/api/portraits/women/44.jpg' },
+      { id: 'demo_3', phone: '+1555123003', displayName: 'Marcus Wright', avatar_url: 'https://randomuser.me/api/portraits/men/75.jpg' },
+      { id: 'demo_4', phone: '+1555123004', displayName: 'Elena Rossi', avatar_url: 'https://randomuser.me/api/portraits/women/68.jpg' },
+      { id: 'demo_5', phone: '+1555123005', displayName: 'Alex Chen', avatar_url: 'https://randomuser.me/api/portraits/men/22.jpg' },
+      { id: 'demo_6', phone: '+1555123006', displayName: 'Jordan Smith', avatar_url: 'https://randomuser.me/api/portraits/women/28.jpg' },
+      { id: 'demo_7', phone: '+1555123007', displayName: 'Taylor Brown', avatar_url: 'https://randomuser.me/api/portraits/men/45.jpg' },
+      { id: 'demo_8', phone: '+1555123008', displayName: 'Priya Patel', avatar_url: 'https://randomuser.me/api/portraits/women/55.jpg' }
     ];
 
     const demoLocations = [
@@ -304,17 +306,25 @@ function App() {
           <CityList
             friends={ghostMode ? [] : friends}
             userLocation={location}
+            user={user}
+            ghostMode={ghostMode}
+            notificationsMuted={notificationsMuted}
             onSelectCity={setSelectedCity}
             onSelectFriend={(friend) => console.log('Selected:', friend)}
             onInvite={() => setShowInvite(true)}
+            onToggleGhostMode={() => setGhostMode(!ghostMode)}
+            onToggleNotifications={() => setNotificationsMuted(!notificationsMuted)}
+            onUpdateLocation={handleUpdateLocation}
+            onMapView={() => setActiveTab('map')}
           />
         )}
 
         {activeTab === 'map' && (
-          <div className="map-placeholder">
-            <span className="material-symbols-outlined" style={{ fontSize: '4rem', opacity: 0.3 }}>map</span>
-            <p className="font-bold uppercase mt-4" style={{ color: 'var(--text-muted)' }}>Map View Coming Soon</p>
-          </div>
+          <MapView
+            friends={ghostMode ? [] : friends}
+            userLocation={location}
+            onSelectCity={setSelectedCity}
+          />
         )}
 
         {activeTab === 'chat' && (

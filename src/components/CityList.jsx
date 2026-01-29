@@ -126,7 +126,7 @@ function getNearestCity(lat, lng) {
     return { ...nearest, distance: Math.round(minDistance) };
 }
 
-export function CityList({ friends = [], userLocation, onSelectCity, onSelectFriend, onInvite }) {
+export function CityList({ friends = [], userLocation, user, onSelectCity, onSelectFriend, onInvite, onToggleGhostMode, onUpdateLocation, onMapView, ghostMode = false, notificationsMuted = false, onToggleNotifications }) {
     // Group friends by city
     const citiesData = useMemo(() => {
         const cityMap = new Map();
@@ -170,9 +170,32 @@ export function CityList({ friends = [], userLocation, onSelectCity, onSelectFri
         <div className="city-list-container">
             {/* Header */}
             <header className="header">
-                <div>
-                    <h1 className="header-title text-primary">Dashboard</h1>
-                    <p className="header-subtitle">Location Tracking</p>
+                <div className="flex items-center gap-3">
+                    {/* User Avatar */}
+                    <div
+                        className="user-avatar-header"
+                        style={{
+                            width: '2.75rem',
+                            height: '2.75rem',
+                            borderRadius: '50%',
+                            border: '2px solid var(--accent-lime)',
+                            overflow: 'hidden',
+                            background: 'var(--surface-dark)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        {user?.avatar_url ? (
+                            <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            <span className="material-symbols-outlined" style={{ color: 'var(--accent-lime)', fontSize: '1.5rem' }}>person</span>
+                        )}
+                    </div>
+                    <div>
+                        <h1 className="header-title text-primary">Where in World</h1>
+                        <p className="header-subtitle">Where are my friends?</p>
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     {onInvite && (
@@ -185,8 +208,21 @@ export function CityList({ friends = [], userLocation, onSelectCity, onSelectFri
                             <span className="material-symbols-outlined">person_add</span>
                         </button>
                     )}
-                    <button className="btn-hard" style={{ width: '3rem', height: '3rem', padding: 0 }}>
-                        <span className="material-symbols-outlined">notifications</span>
+                    <button
+                        className="btn-hard"
+                        style={{
+                            width: '3rem',
+                            height: '3rem',
+                            padding: 0,
+                            background: notificationsMuted ? '#ef4444' : 'var(--surface-dark)',
+                            transition: 'background 0.2s'
+                        }}
+                        onClick={onToggleNotifications}
+                        title={notificationsMuted ? 'Unmute Notifications' : 'Mute Notifications'}
+                    >
+                        <span className="material-symbols-outlined">
+                            {notificationsMuted ? 'notifications_off' : 'notifications'}
+                        </span>
                     </button>
                 </div>
             </header>
@@ -195,7 +231,11 @@ export function CityList({ friends = [], userLocation, onSelectCity, onSelectFri
             {userLocation?.city && (
                 <section className="px-6 mb-6">
                     <div className="card-hard" style={{ overflow: 'hidden' }}>
-                        <div className="flex items-center justify-between p-4" style={{ background: 'white' }}>
+                        <div
+                            className="flex items-center justify-between p-4"
+                            style={{ background: 'white', cursor: 'pointer' }}
+                            onClick={onUpdateLocation}
+                        >
                             <div className="flex items-center gap-3">
                                 <div style={{
                                     width: '2.5rem',
@@ -214,29 +254,33 @@ export function CityList({ friends = [], userLocation, onSelectCity, onSelectFri
                                     <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'black', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 }}>{userLocation.city}</span>
                                 </div>
                             </div>
+                            <span className="material-symbols-outlined" style={{ color: 'black' }}>refresh</span>
                         </div>
                         <div className="flex items-center justify-between p-4" style={{ borderTop: '2px solid black', background: 'var(--graphic-paper)' }}>
                             <div className="flex items-center gap-2">
                                 <span className="material-symbols-outlined" style={{ color: 'black' }}>visibility_off</span>
                                 <span style={{ fontSize: '1.125rem', fontWeight: 800, color: 'black', textTransform: 'uppercase' }}>Ghost Mode</span>
                             </div>
-                            <label style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                                <input type="checkbox" style={{ display: 'none' }} className="ghost-toggle" />
+                            <label
+                                style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                                onClick={(e) => { e.preventDefault(); onToggleGhostMode?.(); }}
+                            >
                                 <div style={{
                                     width: '4rem',
                                     height: '2rem',
-                                    background: 'white',
+                                    background: ghostMode ? 'var(--accent-lime)' : 'white',
                                     border: '2px solid black',
-                                    position: 'relative'
+                                    position: 'relative',
+                                    transition: 'background 0.2s'
                                 }}>
                                     <div style={{
                                         position: 'absolute',
-                                        left: '0.25rem',
+                                        left: ghostMode ? '2.25rem' : '0.25rem',
                                         top: '0.25rem',
                                         width: '1.25rem',
                                         height: '1.25rem',
                                         background: 'black',
-                                        transition: 'transform 0.2s'
+                                        transition: 'left 0.2s'
                                     }}></div>
                                 </div>
                             </label>
@@ -256,19 +300,22 @@ export function CityList({ friends = [], userLocation, onSelectCity, onSelectFri
                     transform: 'skewX(-6deg)',
                     color: 'white'
                 }}>
-                    Active Zones
+                    Earth
                 </h2>
-                <button style={{
-                    color: 'var(--accent-lime)',
-                    fontSize: '0.875rem',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    textDecoration: 'underline',
-                    textUnderlineOffset: '4px',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer'
-                }}>
+                <button
+                    onClick={onMapView}
+                    style={{
+                        color: 'var(--accent-lime)',
+                        fontSize: '1.25rem',
+                        fontWeight: 900,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        fontStyle: 'italic',
+                        transform: 'skewX(-6deg)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer'
+                    }}>
                     Map View
                 </button>
             </div>
@@ -383,23 +430,29 @@ export function CityList({ friends = [], userLocation, onSelectCity, onSelectFri
 
                                     <div className="city-card-footer">
                                         {/* Avatar Stack */}
-                                        <div className="avatar-stack">
-                                            {cityData.friends.slice(0, 3).map((friend, idx) => (
-                                                <div key={friend.id} className="avatar grayscale" style={{
+                                        <div className="avatar-stack-large">
+                                            {cityData.friends.slice(0, 4).map((friend, idx) => (
+                                                <div key={friend.id} className="avatar-large" style={{
+                                                    zIndex: 10 - idx,
                                                     background: ['#A0E8AF', '#FF7F6C', '#C4A7E7', '#FFEB3B'][idx % 4],
-                                                    zIndex: 10 - idx
+                                                    marginLeft: idx > 0 ? '-0.75rem' : 0
                                                 }}>
-                                                    {friend.displayName?.charAt(0)?.toUpperCase() ||
-                                                        friend.display_name?.charAt(0)?.toUpperCase() || '?'}
+                                                    {friend.avatar_url ? (
+                                                        <img src={friend.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                                    ) : (
+                                                        friend.displayName?.charAt(0)?.toUpperCase() ||
+                                                        friend.display_name?.charAt(0)?.toUpperCase() || '?'
+                                                    )}
                                                 </div>
                                             ))}
-                                            {cityData.friends.length > 3 && (
-                                                <div className="avatar" style={{
+                                            {cityData.friends.length > 4 && (
+                                                <div className="avatar-large" style={{
                                                     background: 'white',
                                                     color: 'black',
-                                                    fontSize: '0.75rem'
+                                                    fontSize: '0.875rem',
+                                                    marginLeft: '-0.75rem'
                                                 }}>
-                                                    +{cityData.friends.length - 3}
+                                                    +{cityData.friends.length - 4}
                                                 </div>
                                             )}
                                         </div>
@@ -435,6 +488,26 @@ export function CityList({ friends = [], userLocation, onSelectCity, onSelectFri
                     background: var(--background-dark);
                     overflow-x: hidden;
                     padding-bottom: 5rem;
+                }
+                
+                .avatar-stack-large {
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .avatar-large {
+                    width: 3rem;
+                    height: 3rem;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 800;
+                    font-size: 1rem;
+                    color: black;
+                    border: 3px solid black;
+                    overflow: hidden;
+                    flex-shrink: 0;
                 }
             `}</style>
         </div>
