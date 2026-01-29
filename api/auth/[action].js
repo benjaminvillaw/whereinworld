@@ -508,25 +508,88 @@ export default async function handler(req, res) {
         console.error('Error name:', error.name);
         console.error('Error message:', error.message);
         console.error('Error code:', error.code);
+        console.error('Error status:', error.status);
+        console.error('Full error object:', JSON.stringify(error, null, 2));
 
-        // Provide more specific error messages for common issues
-        if (error.code === 20003 || error.message?.includes('authenticate')) {
+        // Twilio Error Codes - https://www.twilio.com/docs/api/errors
+        const twilioErrorCode = error.code || error.status;
+
+        // Authentication & Credential Errors
+        if (twilioErrorCode === 20003 || error.message?.includes('authenticate')) {
             return res.status(500).json({ error: 'SMS service authentication failed. Check Twilio credentials.' });
         }
-        if (error.code === 21211 || error.message?.includes('invalid')) {
-            return res.status(400).json({ error: 'Invalid phone number format.' });
+        if (twilioErrorCode === 20008) {
+            return res.status(500).json({ error: 'Twilio resource not found. Check Messaging Service SID.' });
         }
-        if (error.code === 21608 || error.message?.includes('unverified')) {
-            return res.status(400).json({ error: 'Phone number not verified in Twilio trial account.' });
+
+        // Phone Number Errors
+        if (twilioErrorCode === 21211) {
+            return res.status(400).json({ error: 'Invalid phone number. Please check the format and try again.' });
         }
-        if (error.message?.includes('MessagingServiceSid')) {
+        if (twilioErrorCode === 21214) {
+            return res.status(400).json({ error: 'Phone number is not a valid mobile number for SMS.' });
+        }
+        if (twilioErrorCode === 21217) {
+            return res.status(400).json({ error: 'Phone number is not a valid number.' });
+        }
+        if (twilioErrorCode === 21608 || error.message?.includes('unverified')) {
+            return res.status(400).json({ error: 'Phone number not verified in Twilio trial account. Add this number to verified caller IDs.' });
+        }
+        if (twilioErrorCode === 21610) {
+            return res.status(400).json({ error: 'This phone number has opted out of receiving messages.' });
+        }
+        if (twilioErrorCode === 21612) {
+            return res.status(400).json({ error: 'Phone number is unreachable or invalid.' });
+        }
+        if (twilioErrorCode === 21614) {
+            return res.status(400).json({ error: 'This phone number is not SMS-capable.' });
+        }
+        if (twilioErrorCode === 21408) {
+            return res.status(400).json({ error: 'Cannot send SMS to this region.' });
+        }
+
+        // Messaging Service Errors
+        if (twilioErrorCode === 21703 || error.message?.includes('MessagingServiceSid')) {
             return res.status(500).json({ error: 'Twilio Messaging Service not configured correctly.' });
         }
-        if (error.message?.includes('supabase') || error.message?.includes('database')) {
+        if (twilioErrorCode === 21704) {
+            return res.status(500).json({ error: 'Messaging Service has no phone numbers configured.' });
+        }
+        if (twilioErrorCode === 21710) {
+            return res.status(500).json({ error: 'Messaging Service not found.' });
+        }
+
+        // Rate Limiting / Carrier Issues
+        if (twilioErrorCode === 21611) {
+            return res.status(429).json({ error: 'Too many messages sent. Please wait a moment and try again.' });
+        }
+        if (twilioErrorCode === 30003 || twilioErrorCode === 30005 || twilioErrorCode === 30006) {
+            return res.status(400).json({ error: 'Phone number is unreachable. Please check the number and try again.' });
+        }
+        if (twilioErrorCode === 30007) {
+            return res.status(400).json({ error: 'Message filtered by carrier. This may be a spam protection filter.' });
+        }
+        if (twilioErrorCode === 30034) {
+            return res.status(429).json({ error: 'Message blocked due to A2P regulations. Please try again later.' });
+        }
+
+        // A2P / 10DLC Errors (common for US numbers)
+        if (twilioErrorCode === 30035 || twilioErrorCode === 30036) {
+            return res.status(500).json({ error: 'A2P registration issue. Contact support.' });
+        }
+
+        // Database / Supabase Errors
+        if (error.message?.includes('supabase') || error.message?.includes('database') || error.code === 'PGRST') {
             return res.status(500).json({ error: 'Database connection error. Please try again.' });
         }
 
-        // Don't expose internal error details to clients
-        return res.status(500).json({ error: 'An unexpected error occurred. Please try again.' });
+        // Generic Twilio errors with message
+        if (error.message?.includes('Twilio') || error.message?.includes('twilio')) {
+            return res.status(500).json({ error: `SMS service error: ${error.message.substring(0, 100)}` });
+        }
+
+        // Fallback: Include error code in response for debugging
+        const errorDetail = twilioErrorCode ? ` (Code: ${twilioErrorCode})` : '';
+        return res.status(500).json({ error: `An unexpected error occurred${errorDetail}. Please try again.` });
     }
 }
