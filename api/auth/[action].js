@@ -419,6 +419,63 @@ export default async function handler(req, res) {
         }
 
         // ============================================
+        // UPDATE AVATAR
+        // ============================================
+        if (action === 'update-avatar' && req.method === 'POST') {
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            const { userId, avatarUrl } = req.body;
+
+            if (!token || !userId || !avatarUrl) {
+                return res.status(400).json({ error: 'Missing required fields' });
+            }
+
+            // Basic URL validation
+            if (!avatarUrl.startsWith('http://') && !avatarUrl.startsWith('https://')) {
+                return res.status(400).json({ error: 'Invalid avatar URL' });
+            }
+
+            // TEST ACCOUNT - Only enabled when ALLOW_TEST_BYPASS=true
+            if (TEST_MODE_ENABLED && (token.startsWith('test_session_') || userId === 'test-user-001')) {
+                global.testSessions = global.testSessions || {};
+                if (global.testSessions[token]) {
+                    global.testSessions[token].avatarUrl = avatarUrl;
+                }
+                return res.status(200).json({
+                    success: true,
+                    user: { id: 'test-user-001', phone: '+15550001234', displayName: global.testSessions[token]?.displayName, avatarUrl }
+                });
+            }
+
+            if (supabase) {
+                // Verify session
+                const { data: session } = await supabase
+                    .from('sessions')
+                    .select('*, users(*)')
+                    .eq('token', token)
+                    .single();
+
+                if (!session || session.users?.id !== userId) {
+                    return res.status(401).json({ error: 'Invalid session' });
+                }
+
+                // Update user
+                const { data: user } = await supabase
+                    .from('users')
+                    .update({ avatar_url: avatarUrl })
+                    .eq('id', userId)
+                    .select()
+                    .single();
+
+                return res.status(200).json({
+                    success: true,
+                    user: { id: user.id, phone: user.phone, displayName: user.display_name, avatarUrl: user.avatar_url }
+                });
+            }
+
+            return res.status(500).json({ error: 'Database not configured' });
+        }
+
+        // ============================================
         // LOGOUT
         // ============================================
         if (action === 'logout' && req.method === 'POST') {

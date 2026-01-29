@@ -44,6 +44,22 @@ export function CityDetail({ city, onBack }) {
 
     const { city: cityName, country, friends = [] } = city;
 
+    // Create SMS deep link for a single phone
+    const getSmsLink = (phone, message = '') => {
+        const cleanPhone = phone?.replace(/\D/g, '') || '';
+        const encodedMsg = encodeURIComponent(message);
+        return `sms:${cleanPhone}${message ? `&body=${encodedMsg}` : ''}`;
+    };
+
+    // Create group SMS link (works on iOS)
+    const getGroupSmsLink = () => {
+        const phones = friends
+            .map(f => (f.phone || '').replace(/\D/g, ''))
+            .filter(p => p.length >= 10)
+            .join(',');
+        const message = `Hey! Who's around in ${cityName}? 📍`;
+        return `sms:${phones}&body=${encodeURIComponent(message)}`;
+    };
     return (
         <div className="city-detail">
             {/* Hero Image */}
@@ -126,14 +142,18 @@ export function CityDetail({ city, onBack }) {
                                     </p>
                                 </div>
 
-                                <button className="friend-item-action">
+                                <a
+                                    href={getSmsLink(friend.phone)}
+                                    className="friend-item-action"
+                                    style={{ textDecoration: 'none' }}
+                                >
                                     <span className="material-symbols-outlined" style={{
                                         fontSize: '1.25rem',
-                                        opacity: active ? 1 : 0.3
+                                        color: 'var(--primary)'
                                     }}>
-                                        near_me
+                                        chat
                                     </span>
-                                </button>
+                                </a>
                             </div>
                         );
                     })}
@@ -142,10 +162,24 @@ export function CityDetail({ city, onBack }) {
 
             {/* Message Group CTA */}
             <div className="city-cta">
-                <button className="btn-primary" style={{ width: '100%', height: '4rem', fontSize: '1.25rem' }}>
+                <a
+                    href={getGroupSmsLink()}
+                    className="btn-primary"
+                    style={{
+                        width: '100%',
+                        height: '4rem',
+                        fontSize: '1.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        textDecoration: 'none',
+                        borderRadius: 'var(--radius-xl)'
+                    }}
+                >
                     <span className="material-symbols-outlined" style={{ fontSize: '1.5rem' }}>chat_bubble</span>
                     Message Group
-                </button>
+                </a>
             </div>
 
             {/* Decorative Blurs */}

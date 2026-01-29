@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CityList } from './components/CityList';
 import { CityDetail } from './components/CityDetail';
 import { FriendsList } from './components/FriendsList';
@@ -24,18 +24,53 @@ function App() {
   const [showInvite, setShowInvite] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [ghostMode, setGhostMode] = useState(false);
+  const [arrivals, setArrivals] = useState([]); // Track friend arrivals for notifications
+
+  // Track previous friend locations to detect changes
+  const prevFriendLocations = useRef({});
 
   const { location, requestLocation, permission, loading: locationLoading } = useLocation();
 
-  // Load friends data
+  // Load friends data and detect arrivals
   const loadFriends = useCallback(async () => {
     try {
       const friendsData = await api.getFriends();
+
+      // Detect friends who arrived in user's city
+      const userCity = location?.city;
+      if (userCity && Object.keys(prevFriendLocations.current).length > 0) {
+        const newArrivals = [];
+        friendsData.forEach(friend => {
+          const currentCity = friend.location?.city;
+          const previousCity = prevFriendLocations.current[friend.id];
+
+          // Friend just arrived in user's city (was elsewhere before)
+          if (currentCity === userCity && previousCity !== userCity && previousCity !== undefined) {
+            newArrivals.push({
+              friendName: friend.displayName || friend.display_name || 'A friend',
+              city: currentCity,
+              timestamp: Date.now()
+            });
+          }
+        });
+
+        if (newArrivals.length > 0) {
+          setArrivals(prev => [...newArrivals, ...prev].slice(0, 5)); // Keep max 5
+        }
+      }
+
+      // Update previous locations for next comparison
+      const newPrevLocations = {};
+      friendsData.forEach(f => {
+        newPrevLocations[f.id] = f.location?.city;
+      });
+      prevFriendLocations.current = newPrevLocations;
+
       setFriends(friendsData);
     } catch (err) {
       console.error('Failed to load friends:', err);
     }
-  }, []);
+  }, [location?.city]);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -255,12 +290,23 @@ function App() {
 
       {/* Main Content */}
       <main className="app-main">
+        {/* Engagement Banners with Friend Arrivals */}
+        <EngagementBanners
+          friends={friends}
+          arrivals={arrivals}
+          userLocation={location}
+          lastLocationUpdate={location?.updatedAt}
+          onUpdateLocation={handleUpdateLocation}
+          onDismissArrival={(index) => setArrivals(prev => prev.filter((_, i) => i !== index))}
+        />
+
         {activeTab === 'grid' && (
           <CityList
             friends={ghostMode ? [] : friends}
             userLocation={location}
             onSelectCity={setSelectedCity}
             onSelectFriend={(friend) => console.log('Selected:', friend)}
+            onInvite={() => setShowInvite(true)}
           />
         )}
 

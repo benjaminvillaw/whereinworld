@@ -13,9 +13,11 @@ import { getStreakData } from '../lib/streak';
 
 export function EngagementBanners({
     friends = [],
+    arrivals = [], // New: Array of {friendName, city, timestamp} for recent arrivals
     userLocation,
     lastLocationUpdate,
-    onUpdateLocation
+    onUpdateLocation,
+    onDismissArrival
 }) {
     const [dismissed, setDismissed] = useState({});
     // Capture current time once when component mounts to avoid impure Date.now() in render
@@ -134,6 +136,21 @@ export function EngagementBanners({
         });
     }
 
+    // 7. FRIEND ARRIVALS (Real-time notifications)
+    arrivals.forEach((arrival, index) => {
+        if (!dismissed[`arrival_${index}`]) {
+            banners.push({
+                id: `arrival_${index}`,
+                type: 'arrival',
+                icon: '👋',
+                title: `${arrival.friendName} just arrived!`,
+                message: `Now in ${arrival.city}`,
+                priority: 4, // Highest priority
+                onDismiss: () => onDismissArrival?.(index)
+            });
+        }
+    });
+
     // Sort by priority and show top 2
     const visibleBanners = banners
         .sort((a, b) => b.priority - a.priority)
@@ -215,6 +232,17 @@ export function EngagementBanners({
         .banner-success {
           background: rgba(16, 185, 129, 0.1);
           border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .banner-arrival {
+          background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(99, 102, 241, 0.15) 100%);
+          border: 1px solid rgba(139, 92, 246, 0.4);
+          animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.2); }
+          50% { box-shadow: 0 0 12px 4px rgba(139, 92, 246, 0.3); }
         }
         
         .banner-icon {

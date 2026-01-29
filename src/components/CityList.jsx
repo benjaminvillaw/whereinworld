@@ -75,7 +75,58 @@ const WAVE_PATHS = [
     "M0,96L48,112C96,128,192,160,288,186.7C384,213,480,235,576,213.3C672,192,768,128,864,122.7C960,117,1056,171,1152,197.3C1248,224,1344,224,1392,224L1440,224L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"
 ];
 
-export function CityList({ friends = [], userLocation, onSelectCity, onSelectFriend }) {
+// Major cities database for nearest city lookup
+const MAJOR_CITIES = [
+    { name: 'New York', country: 'United States', lat: 40.7128, lng: -74.0060 },
+    { name: 'Los Angeles', country: 'United States', lat: 34.0522, lng: -118.2437 },
+    { name: 'Chicago', country: 'United States', lat: 41.8781, lng: -87.6298 },
+    { name: 'Houston', country: 'United States', lat: 29.7604, lng: -95.3698 },
+    { name: 'Miami', country: 'United States', lat: 25.7617, lng: -80.1918 },
+    { name: 'San Francisco', country: 'United States', lat: 37.7749, lng: -122.4194 },
+    { name: 'Seattle', country: 'United States', lat: 47.6062, lng: -122.3321 },
+    { name: 'Boston', country: 'United States', lat: 42.3601, lng: -71.0589 },
+    { name: 'Denver', country: 'United States', lat: 39.7392, lng: -104.9903 },
+    { name: 'Atlanta', country: 'United States', lat: 33.7490, lng: -84.3880 },
+    { name: 'London', country: 'United Kingdom', lat: 51.5074, lng: -0.1278 },
+    { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
+    { name: 'Tokyo', country: 'Japan', lat: 35.6762, lng: 139.6503 },
+    { name: 'Sydney', country: 'Australia', lat: -33.8688, lng: 151.2093 },
+    { name: 'Dubai', country: 'UAE', lat: 25.2048, lng: 55.2708 },
+    { name: 'Singapore', country: 'Singapore', lat: 1.3521, lng: 103.8198 },
+    { name: 'Berlin', country: 'Germany', lat: 52.5200, lng: 13.4050 },
+    { name: 'Toronto', country: 'Canada', lat: 43.6532, lng: -79.3832 },
+    { name: 'Mexico City', country: 'Mexico', lat: 19.4326, lng: -99.1332 },
+    { name: 'São Paulo', country: 'Brazil', lat: -23.5505, lng: -46.6333 },
+];
+
+// Calculate distance between two points using Haversine formula
+function getDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Find nearest major city
+function getNearestCity(lat, lng) {
+    let nearest = MAJOR_CITIES[0];
+    let minDistance = Infinity;
+
+    for (const city of MAJOR_CITIES) {
+        const distance = getDistance(lat, lng, city.lat, city.lng);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearest = city;
+        }
+    }
+
+    return { ...nearest, distance: Math.round(minDistance) };
+}
+
+export function CityList({ friends = [], userLocation, onSelectCity, onSelectFriend, onInvite }) {
     // Group friends by city
     const citiesData = useMemo(() => {
         const cityMap = new Map();
@@ -123,9 +174,21 @@ export function CityList({ friends = [], userLocation, onSelectCity, onSelectFri
                     <h1 className="header-title text-primary">Dashboard</h1>
                     <p className="header-subtitle">Location Tracking</p>
                 </div>
-                <button className="btn-hard" style={{ width: '3rem', height: '3rem', padding: 0 }}>
-                    <span className="material-symbols-outlined">notifications</span>
-                </button>
+                <div className="flex items-center gap-2">
+                    {onInvite && (
+                        <button
+                            className="btn-hard"
+                            style={{ width: '3rem', height: '3rem', padding: 0, background: 'var(--accent-lime)', color: 'black' }}
+                            onClick={onInvite}
+                            title="Invite Friends"
+                        >
+                            <span className="material-symbols-outlined">person_add</span>
+                        </button>
+                    )}
+                    <button className="btn-hard" style={{ width: '3rem', height: '3rem', padding: 0 }}>
+                        <span className="material-symbols-outlined">notifications</span>
+                    </button>
+                </div>
             </header>
 
             {/* User Location Card */}
@@ -212,7 +275,56 @@ export function CityList({ friends = [], userLocation, onSelectCity, onSelectFri
 
             {/* City Cards */}
             <div className="flex flex-col gap-6 px-6 pb-28">
-                {citiesData.length === 0 ? (
+                {/* User's City Card - Always First */}
+                {userLocation?.lat && userLocation?.lng && (() => {
+                    const nearestCity = getNearestCity(userLocation.lat, userLocation.lng);
+                    return (
+                        <div className="city-card your-city-card">
+                            {/* Background Image */}
+                            <div className="city-card-image">
+                                <img
+                                    src={getCityImage(nearestCity.name)}
+                                    alt={nearestCity.name}
+                                    loading="lazy"
+                                />
+                                <div style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.5) 100%)'
+                                }}></div>
+                            </div>
+
+                            {/* Wave Separator */}
+                            <div className="city-card-wave" style={{ color: '#CCFF00' }}>
+                                <svg preserveAspectRatio="none" viewBox="0 0 1440 320" style={{ height: '4rem' }}>
+                                    <path d={WAVE_PATHS[0]} fill="currentColor" fillOpacity="1"></path>
+                                </svg>
+                            </div>
+
+                            {/* Content Area */}
+                            <div className="city-card-content" style={{ background: '#CCFF00', paddingBottom: '1.5rem' }}>
+                                <div className="flex items-start justify-between mb-4">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="material-symbols-outlined filled" style={{ fontSize: '1rem' }}>my_location</span>
+                                            <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Your Location</span>
+                                        </div>
+                                        <h3 className="city-card-title">{nearestCity.name}</h3>
+                                        <p className="city-card-weather">
+                                            <span className="material-symbols-outlined" style={{ fontSize: '0.875rem' }}>location_on</span>
+                                            Near {nearestCity.country}
+                                        </p>
+                                    </div>
+                                    <div className="badge-tag" style={{ transform: 'rotate(-2deg)', background: 'black', color: '#CCFF00' }}>
+                                        📍 You
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {citiesData.length === 0 && !userLocation?.lat ? (
                     <div className="text-center py-6" style={{ color: 'var(--text-muted)' }}>
                         <span className="material-symbols-outlined" style={{ fontSize: '4rem', opacity: 0.5 }}>location_city</span>
                         <p className="mt-4 font-bold uppercase">No active zones yet</p>

@@ -2,191 +2,208 @@ import { useState, useMemo } from 'react';
 
 // Calculate distance between two coordinates in km
 function getDistance(lat1, lng1, lat2, lng2) {
-    const R = 6371; // Earth's radius in km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLng / 2) * Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
 }
 
 // Format relative time
 function timeAgo(dateString) {
-    if (!dateString) return 'Never';
+  if (!dateString) return 'Never';
 
-    const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
+  const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
 
-    if (seconds < 60) return 'Just now';
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
-    return new Date(dateString).toLocaleDateString();
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  return new Date(dateString).toLocaleDateString();
 }
 
 // Get freshness level
 function getFreshness(updatedAt) {
-    if (!updatedAt) return 0;
-    const hoursAgo = (Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60);
-    if (hoursAgo <= 24) return 1;
-    if (hoursAgo >= 72) return 0;
-    return 1 - (hoursAgo - 24) / 48;
+  if (!updatedAt) return 0;
+  const hoursAgo = (Date.now() - new Date(updatedAt).getTime()) / (1000 * 60 * 60);
+  if (hoursAgo <= 24) return 1;
+  if (hoursAgo >= 72) return 0;
+  return 1 - (hoursAgo - 24) / 48;
 }
 
 export function FriendsList({ friends = [], userLocation, onSelectFriend }) {
-    const [filter, setFilter] = useState('all'); // 'all', 'nearby', 'stale'
-    const [sortBy, setSortBy] = useState('distance'); // 'distance', 'recent', 'name'
+  const [filter, setFilter] = useState('all'); // 'all', 'nearby', 'stale'
+  const [sortBy, setSortBy] = useState('distance'); // 'distance', 'recent', 'name'
 
-    // Process friends with distance and sorting
-    const processedFriends = useMemo(() => {
-        let result = friends.map(friend => {
-            let distance = null;
-            if (userLocation?.lat && friend.location?.lat) {
-                distance = getDistance(
-                    userLocation.lat, userLocation.lng,
-                    friend.location.lat, friend.location.lng
-                );
-            }
+  // Process friends with distance and sorting
+  const processedFriends = useMemo(() => {
+    let result = friends.map(friend => {
+      let distance = null;
+      if (userLocation?.lat && friend.location?.lat) {
+        distance = getDistance(
+          userLocation.lat, userLocation.lng,
+          friend.location.lat, friend.location.lng
+        );
+      }
 
-            const freshness = getFreshness(friend.location?.updatedAt);
+      const freshness = getFreshness(friend.location?.updatedAt);
 
-            return {
-                ...friend,
-                distance,
-                freshness,
-                isNearby: distance !== null && distance <= 50 // Within 50km
-            };
-        });
+      return {
+        ...friend,
+        distance,
+        freshness,
+        isNearby: distance !== null && distance <= 50 // Within 50km
+      };
+    });
 
-        // Filter
-        if (filter === 'nearby') {
-            result = result.filter(f => f.isNearby);
-        } else if (filter === 'stale') {
-            result = result.filter(f => f.freshness < 0.5);
-        }
+    // Filter
+    if (filter === 'nearby') {
+      result = result.filter(f => f.isNearby);
+    } else if (filter === 'stale') {
+      result = result.filter(f => f.freshness < 0.5);
+    }
 
-        // Sort
-        result.sort((a, b) => {
-            if (sortBy === 'distance') {
-                if (a.distance === null) return 1;
-                if (b.distance === null) return -1;
-                return a.distance - b.distance;
-            }
-            if (sortBy === 'recent') {
-                const aTime = a.location?.updatedAt ? new Date(a.location.updatedAt).getTime() : 0;
-                const bTime = b.location?.updatedAt ? new Date(b.location.updatedAt).getTime() : 0;
-                return bTime - aTime;
-            }
-            if (sortBy === 'name') {
-                return (a.displayName || '').localeCompare(b.displayName || '');
-            }
-            return 0;
-        });
+    // Sort
+    result.sort((a, b) => {
+      if (sortBy === 'distance') {
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        return a.distance - b.distance;
+      }
+      if (sortBy === 'recent') {
+        const aTime = a.location?.updatedAt ? new Date(a.location.updatedAt).getTime() : 0;
+        const bTime = b.location?.updatedAt ? new Date(b.location.updatedAt).getTime() : 0;
+        return bTime - aTime;
+      }
+      if (sortBy === 'name') {
+        return (a.displayName || '').localeCompare(b.displayName || '');
+      }
+      return 0;
+    });
 
-        return result;
-    }, [friends, userLocation, filter, sortBy]);
+    return result;
+  }, [friends, userLocation, filter, sortBy]);
 
-    const nearbyCount = processedFriends.filter(f => f.isNearby).length;
+  const nearbyCount = processedFriends.filter(f => f.isNearby).length;
 
-    return (
-        <div className="friends-list">
-            {/* Header with filters */}
-            <div className="friends-header">
-                <h3 className="friends-title">
-                    Friends
-                    <span className="friends-count">{friends.length}</span>
-                </h3>
+  return (
+    <div className="friends-list">
+      {/* Header with filters */}
+      <div className="friends-header">
+        <h3 className="friends-title">
+          Friends
+          <span className="friends-count">{friends.length}</span>
+        </h3>
 
-                <div className="friends-filters">
-                    <select
-                        className="filter-select"
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                    >
-                        <option value="all">All Friends</option>
-                        <option value="nearby">Nearby ({nearbyCount})</option>
-                        <option value="stale">Need Update</option>
-                    </select>
+        <div className="friends-filters">
+          <select
+            className="filter-select"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">All Friends</option>
+            <option value="nearby">Nearby ({nearbyCount})</option>
+            <option value="stale">Need Update</option>
+          </select>
 
-                    <select
-                        className="filter-select"
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value)}
-                    >
-                        <option value="distance">By Distance</option>
-                        <option value="recent">By Recent</option>
-                        <option value="name">By Name</option>
-                    </select>
+          <select
+            className="filter-select"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <option value="distance">By Distance</option>
+            <option value="recent">By Recent</option>
+            <option value="name">By Name</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Nearby alert */}
+      {nearbyCount > 0 && filter !== 'nearby' && (
+        <div className="nearby-alert" onClick={() => setFilter('nearby')}>
+          <span className="nearby-icon">📍</span>
+          <span><strong>{nearbyCount}</strong> friend{nearbyCount > 1 ? 's' : ''} nearby!</span>
+          <span className="nearby-cta">View →</span>
+        </div>
+      )}
+
+      {/* Friends list */}
+      <div className="friends-scroll">
+        {processedFriends.length === 0 ? (
+          <div className="friends-empty">
+            <div className="empty-icon">👥</div>
+            <p>No friends to show</p>
+            <p className="text-muted text-sm">
+              {filter === 'nearby'
+                ? 'No friends within 50km'
+                : 'Sync your contacts to find friends'}
+            </p>
+          </div>
+        ) : (
+          processedFriends.map(friend => {
+            const isGhost = friend.is_ghost || friend.isGhost;
+            const isStale = friend.freshness < 0.3;
+
+            return (
+              <div
+                key={friend.id}
+                className={`friend-item fade-in ${friend.isNearby ? 'nearby' : ''} ${isGhost ? 'ghost' : ''} ${isStale ? 'stale-item' : ''}`}
+                onClick={() => onSelectFriend?.(friend)}
+              >
+                <div
+                  className="friend-avatar"
+                  style={{ opacity: isGhost ? 0.4 : (0.4 + friend.freshness * 0.6) }}
+                >
+                  {friend.displayName?.charAt(0)?.toUpperCase() || '?'}
                 </div>
-            </div>
 
-            {/* Nearby alert */}
-            {nearbyCount > 0 && filter !== 'nearby' && (
-                <div className="nearby-alert" onClick={() => setFilter('nearby')}>
-                    <span className="nearby-icon">📍</span>
-                    <span><strong>{nearbyCount}</strong> friend{nearbyCount > 1 ? 's' : ''} nearby!</span>
-                    <span className="nearby-cta">View →</span>
+                <div className="friend-info">
+                  <div className="friend-name">
+                    {friend.displayName || 'Unknown'}
+                    {isGhost && <span className="ghost-badge" title="This friend is in ghost mode">👻</span>}
+                  </div>
+                  <div className="friend-location">
+                    📍 {friend.location?.city || 'Unknown'}, {friend.location?.country || ''}
+                    {isGhost && <span className="last-seen-label"> (Last seen)</span>}
+                  </div>
                 </div>
-            )}
 
-            {/* Friends list */}
-            <div className="friends-scroll">
-                {processedFriends.length === 0 ? (
-                    <div className="friends-empty">
-                        <div className="empty-icon">👥</div>
-                        <p>No friends to show</p>
-                        <p className="text-muted text-sm">
-                            {filter === 'nearby'
-                                ? 'No friends within 50km'
-                                : 'Sync your contacts to find friends'}
-                        </p>
-                    </div>
-                ) : (
-                    processedFriends.map(friend => (
-                        <div
-                            key={friend.id}
-                            className={`friend-item fade-in ${friend.isNearby ? 'nearby' : ''}`}
-                            onClick={() => onSelectFriend?.(friend)}
-                        >
-                            <div
-                                className="friend-avatar"
-                                style={{ opacity: 0.4 + friend.freshness * 0.6 }}
-                            >
-                                {friend.displayName?.charAt(0)?.toUpperCase() || '?'}
-                            </div>
+                <div className="friend-meta">
+                  {friend.isNearby && (
+                    <span className="badge badge-success">Nearby</span>
+                  )}
+                  {friend.distance !== null && (
+                    <span className="friend-distance">
+                      {friend.distance < 1
+                        ? '< 1 km'
+                        : friend.distance < 100
+                          ? `${Math.round(friend.distance)} km`
+                          : `${Math.round(friend.distance / 100) * 100}+ km`}
+                    </span>
+                  )}
+                  <span className={`friend-updated ${friend.freshness < 0.5 ? 'stale' : ''}`}>
+                    {timeAgo(friend.location?.updatedAt)}
+                  </span>
+                </div>
 
-                            <div className="friend-info">
-                                <div className="friend-name">{friend.displayName || 'Unknown'}</div>
-                                <div className="friend-location">
-                                    📍 {friend.location?.city || 'Unknown'}, {friend.location?.country || ''}
-                                </div>
-                            </div>
+                <a
+                  href={`sms:${(friend.phone || '').replace(/\D/g, '')}`}
+                  className="friend-message-btn"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="material-symbols-outlined">chat</span>
+                </a>
+              </div>
+            )
+          })
+        )}
+      </div>
 
-                            <div className="friend-meta">
-                                {friend.isNearby && (
-                                    <span className="badge badge-success">Nearby</span>
-                                )}
-                                {friend.distance !== null && (
-                                    <span className="friend-distance">
-                                        {friend.distance < 1
-                                            ? '< 1 km'
-                                            : friend.distance < 100
-                                                ? `${Math.round(friend.distance)} km`
-                                                : `${Math.round(friend.distance / 100) * 100}+ km`}
-                                    </span>
-                                )}
-                                <span className={`friend-updated ${friend.freshness < 0.5 ? 'stale' : ''}`}>
-                                    {timeAgo(friend.location?.updatedAt)}
-                                </span>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            <style>{`
+      <style>{`
         .friends-list {
           display: flex;
           flex-direction: column;
@@ -364,7 +381,50 @@ export function FriendsList({ friends = [], userLocation, onSelectFriend }) {
         .friend-updated.stale {
           color: var(--warning);
         }
+        
+        .friend-message-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          border-radius: var(--radius-full);
+          background: rgba(99, 102, 241, 0.1);
+          color: var(--primary);
+          text-decoration: none;
+          transition: all var(--transition-fast);
+          flex-shrink: 0;
+          margin-left: 8px;
+        }
+        
+        .friend-message-btn:hover {
+          background: rgba(99, 102, 241, 0.2);
+          transform: scale(1.1);
+        }
+        
+        .friend-message-btn .material-symbols-outlined {
+          font-size: 18px;
+        }
+        
+        .ghost-badge {
+          margin-left: 6px;
+          font-size: 14px;
+        }
+        
+        .friend-item.ghost {
+          opacity: 0.7;
+        }
+        
+        .friend-item.stale-item {
+          border-left: 3px solid var(--warning);
+        }
+        
+        .last-seen-label {
+          font-size: 11px;
+          color: var(--text-muted);
+          font-style: italic;
+        }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 }

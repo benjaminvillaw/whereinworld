@@ -32,3 +32,4 @@ server/node_modules
 *.sln
 *.sw?
 .vercel
+.env*.local

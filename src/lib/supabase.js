@@ -12,10 +12,20 @@ const API_URL = import.meta.env.PROD ? '' : (import.meta.env.VITE_API_URL || '')
 
 // Only create real client if we have valid credentials
 const hasValidCredentials = SUPABASE_URL !== 'https://demo.supabase.co';
-// In production, always use backend API (serverless functions at /api)
-const hasBackend = import.meta.env.PROD || !!API_URL;
 
-export const supabase = hasValidCredentials
+// DEMO MODE: ALWAYS enable on localhost for easy local testing
+// This allows testing the full app flow without real phone/SMS
+const isLocalhost = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+// Demo mode on localhost unless VITE_FORCE_REAL is set
+const DEMO_MODE = isLocalhost && import.meta.env.VITE_FORCE_REAL !== 'true';
+
+// In production, always use backend API (serverless functions at /api)
+// But skip backend in demo mode to use local storage
+const hasBackend = !DEMO_MODE && (import.meta.env.PROD || !!API_URL);
+
+export const supabase = hasValidCredentials && !DEMO_MODE
     ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
 
@@ -251,6 +261,77 @@ export const api = {
         return user;
     },
 
+    // Upload avatar image and update user profile
+    async uploadAvatar(userId, file) {
+        if (hasBackend && supabase) {
+            // Upload to Supabase Storage
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${userId}-${Date.now()}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            // Get public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            // Update user record via API
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/auth/update-avatar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ userId, avatarUrl: publicUrl })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to update avatar');
+            return data.user;
+        }
+
+        if (supabase) {
+            // Direct Supabase upload
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${userId}-${Date.now()}.${fileExt}`;
+            const filePath = `avatars/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file, { upsert: true });
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            const { data, error } = await supabase
+                .from('users')
+                .update({ avatar_url: publicUrl })
+                .eq('id', userId)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { id: data.id, phone: data.phone, displayName: data.display_name, avatarUrl: data.avatar_url };
+        }
+
+        // Demo mode: store as data URL
+        const reader = new FileReader();
+        const dataUrl = await new Promise((resolve) => {
+            reader.onload = (e) => resolve(e.target.result);
+            reader.readAsDataURL(file);
+        });
+        const user = await localBackend.updateUser(userId, { avatarUrl: dataUrl });
+        return user;
+    },
+
     // Legacy signIn for demo mode compatibility
     async signIn(phone, name) {
         // In demo mode, just create/login user directly
@@ -440,7 +521,7 @@ function normalizePhone(phone) {
     return '+' + digits;
 }
 
-// Export for demo mode setup (demo mode is when neither backend nor Supabase is configured)
+// Export for demo mode setup
 export function isDemoMode() {
-    return !hasValidCredentials && !hasBackend;
+    return DEMO_MODE;
 }

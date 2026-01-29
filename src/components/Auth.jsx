@@ -2,16 +2,19 @@ import { useState, useRef } from 'react';
 import { api, isDemoMode } from '../lib/supabase';
 
 export function Auth({ onAuthenticated }) {
-  const [step, setStep] = useState('phone'); // 'phone', 'otp', 'name'
+  const [step, setStep] = useState('phone'); // 'phone', 'otp', 'name', 'avatar'
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [name, setName] = useState('');
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
   const [verifiedUser, setVerifiedUser] = useState(null);
 
   const otpRefs = useRef([]);
+  const fileInputRef = useRef(null);
 
   // Handle OTP input change
   const handleOtpChange = (index, value) => {
@@ -107,8 +110,24 @@ export function Auth({ onAuthenticated }) {
           setStep('name');
         }
       } else if (step === 'name') {
-        const updatedUser = await api.updateUserName(verifiedUser.id, name);
-        onAuthenticated(updatedUser);
+        // In demo mode, verifiedUser may be null - create user now with the name
+        let currentUser = verifiedUser;
+        if (!currentUser) {
+          // Demo mode: create user with name during this step
+          currentUser = await api.verifyOtp(phone, '000000', name);
+        } else {
+          // Normal mode: update existing user's name
+          currentUser = await api.updateUserName(verifiedUser.id, name);
+        }
+        setVerifiedUser(currentUser);
+        setStep('avatar');
+      } else if (step === 'avatar') {
+        let finalUser = verifiedUser;
+        if (avatarFile) {
+          // Upload avatar
+          finalUser = await api.uploadAvatar(verifiedUser.id, avatarFile);
+        }
+        onAuthenticated(finalUser);
       }
     } catch (err) {
       setError(err.message || 'Something went wrong');
@@ -231,8 +250,72 @@ export function Auth({ onAuthenticated }) {
                 className="btn btn-primary"
                 disabled={loading || !name.trim()}
               >
-                {loading ? 'Setting up...' : 'Get Started'}
+                {loading ? 'Setting up...' : 'Continue'}
               </button>
+            </>
+          )}
+
+          {step === 'avatar' && (
+            <>
+              <div className="form-group">
+                <label className="form-label">Add a profile photo</label>
+                <p className="form-hint" style={{ marginBottom: '1.5rem' }}>
+                  Help friends recognize you
+                </p>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setAvatarFile(file);
+                      const reader = new FileReader();
+                      reader.onload = (ev) => setAvatarPreview(ev.target.result);
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+
+                <div
+                  className="avatar-picker"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Avatar preview" className="avatar-preview" />
+                  ) : (
+                    <div className="avatar-placeholder">
+                      <span className="material-symbols-outlined" style={{ fontSize: '3rem', color: 'var(--text-muted)' }}>
+                        add_a_photo
+                      </span>
+                      <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                        Tap to add photo
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : avatarFile ? 'Save & Continue' : 'Continue'}
+              </button>
+
+              {!avatarFile && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => onAuthenticated(verifiedUser)}
+                  disabled={loading}
+                >
+                  Skip for now
+                </button>
+              )}
             </>
           )}
 
@@ -417,6 +500,39 @@ export function Auth({ onAuthenticated }) {
         
         .otp-input:hover:not(:focus) {
           border-color: var(--text-muted);
+        }
+
+        .avatar-picker {
+          width: 8rem;
+          height: 8rem;
+          margin: 0 auto;
+          border-radius: var(--radius-full);
+          border: 3px dashed var(--surface-border);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all var(--transition-fast);
+          overflow: hidden;
+          background: var(--background-dark);
+        }
+        
+        .avatar-picker:hover {
+          border-color: var(--primary);
+          background: rgba(99, 102, 241, 0.1);
+        }
+        
+        .avatar-preview {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        .avatar-placeholder {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
         }
 
         .btn {
