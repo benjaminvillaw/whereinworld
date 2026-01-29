@@ -49,7 +49,7 @@ export function InviteFriends({ onClose, onInviteSent }) {
                     setCopied(true);
                 }
             } catch (err) {
-                setError('Failed to generate invite link');
+                setError(err.message || 'Failed to generate invite link');
                 return;
             }
         } else {
