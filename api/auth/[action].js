@@ -7,11 +7,10 @@ const supabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY
     ? createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
     : null;
 
-// Initialize Twilio
-const twilioClient = twilio(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN
-);
+// Initialize Twilio - only if credentials are available
+const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+    ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
+    : null;
 
 // Check if test mode is enabled (only for development/testing)
 const TEST_MODE_ENABLED = process.env.ALLOW_TEST_BYPASS === 'true';
@@ -219,6 +218,11 @@ export default async function handler(req, res) {
                 to: normalizedPhone,
                 body: `Your Where In World code is: ${code}\n\nExpires in 10 minutes.`
             };
+
+            // Check if Twilio client is initialized
+            if (!twilioClient) {
+                return res.status(500).json({ error: 'SMS service not configured. Add TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN in Vercel.' });
+            }
 
             if (process.env.TWILIO_MESSAGING_SERVICE_SID) {
                 messageOptions.messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
