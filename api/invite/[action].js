@@ -510,7 +510,61 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('Invite API Error:', error);
-        // Don't expose internal error details to clients
-        return res.status(500).json({ error: 'An unexpected error occurred. Please try again.' });
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error code:', error.code);
+        console.error('Error status:', error.status);
+
+        // Twilio Error Codes
+        const twilioErrorCode = error.code || error.status;
+
+        // Authentication & Credential Errors
+        if (twilioErrorCode === 20003 || error.message?.includes('authenticate')) {
+            return res.status(500).json({ error: 'SMS service authentication failed. Check Twilio credentials.' });
+        }
+
+        // Phone Number Errors
+        if (twilioErrorCode === 21211) {
+            return res.status(400).json({ error: 'Invalid phone number. Please check the format.' });
+        }
+        if (twilioErrorCode === 21608 || error.message?.includes('unverified')) {
+            return res.status(400).json({ error: 'Phone number not verified in Twilio trial account.' });
+        }
+        if (twilioErrorCode === 21610) {
+            return res.status(400).json({ error: 'This phone number has opted out of receiving messages.' });
+        }
+        if (twilioErrorCode === 21614) {
+            return res.status(400).json({ error: 'This phone number is not SMS-capable.' });
+        }
+
+        // Messaging Service Errors
+        if (twilioErrorCode === 21703 || twilioErrorCode === 21704 || twilioErrorCode === 21705 || twilioErrorCode === 21710) {
+            return res.status(500).json({ error: 'Twilio Messaging Service not configured correctly.' });
+        }
+
+        // Carrier Issues
+        if (twilioErrorCode === 30003 || twilioErrorCode === 30005 || twilioErrorCode === 30006) {
+            return res.status(400).json({ error: 'Phone number is unreachable.' });
+        }
+        if (twilioErrorCode === 30007) {
+            return res.status(400).json({ error: 'Message filtered by carrier.' });
+        }
+
+        // Database / Supabase Errors
+        if (error.code === '23505' || error.message?.includes('duplicate')) {
+            return res.status(409).json({ error: 'Invite already exists for this phone number.' });
+        }
+        if (error.code === 'PGRST' || error.message?.includes('supabase') || error.message?.includes('database')) {
+            return res.status(500).json({ error: 'Database connection error. Please try again.' });
+        }
+
+        // Generic Twilio errors with message
+        if (error.message?.includes('Twilio') || error.message?.includes('twilio')) {
+            return res.status(500).json({ error: `SMS service error: ${error.message.substring(0, 100)}` });
+        }
+
+        // Fallback with error code for debugging
+        const errorDetail = twilioErrorCode ? ` (Code: ${twilioErrorCode})` : '';
+        return res.status(500).json({ error: `An unexpected error occurred${errorDetail}. Please try again.` });
     }
 }
