@@ -8,6 +8,7 @@ import { InviteFriends } from './components/InviteFriends';
 import { Settings } from './components/Settings';
 import { BottomNav } from './components/BottomNav';
 import { MapView } from './components/MapView';
+import { ArrivalNotification } from './components/ArrivalNotification';
 import { EngagementBanners } from './components/EngagementBanners';
 import { updateStreak } from './lib/streak';
 import { useLocation } from './hooks/useLocation';
@@ -49,6 +50,7 @@ function App() {
           // Friend just arrived in user's city (was elsewhere before)
           if (currentCity === userCity && previousCity !== userCity && previousCity !== undefined) {
             newArrivals.push({
+              friend: friend, // Store full friend object for notification
               friendName: friend.displayName || friend.display_name || 'A friend',
               city: currentCity,
               timestamp: Date.now()
@@ -220,6 +222,26 @@ function App() {
     }
   };
 
+  // Demo function to test arrival notification (can be triggered from console)
+  const triggerDemoArrival = () => {
+    const demoFriend = friends[0] || {
+      id: 'demo',
+      displayName: 'Alex Chen',
+      avatar_url: 'https://randomuser.me/api/portraits/men/32.jpg'
+    };
+    setArrivals([{
+      friend: demoFriend,
+      friendName: demoFriend.displayName || 'Alex',
+      city: location?.city || 'Boston',
+      timestamp: Date.now()
+    }]);
+  };
+
+  // Expose demo function to window for testing
+  if (typeof window !== 'undefined') {
+    window.triggerDemoArrival = triggerDemoArrival;
+  }
+
   // Loading state
   if (loading) {
     return (
@@ -340,6 +362,19 @@ function App() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
+
+      {/* Arrival Notification Modal */}
+      {arrivals.length > 0 && !notificationsMuted && arrivals[0].friend && (
+        <ArrivalNotification
+          friend={arrivals[0].friend}
+          city={arrivals[0].city}
+          onSayHi={(friend) => {
+            console.log('Say hi to:', friend);
+            // Could open chat or send a greeting
+          }}
+          onDismiss={() => setArrivals(prev => prev.slice(1))}
+        />
+      )}
 
       <style>{`
         .app {

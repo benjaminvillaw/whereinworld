@@ -505,6 +505,27 @@ export default async function handler(req, res) {
 
     } catch (error) {
         console.error('Auth API Error:', error);
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error code:', error.code);
+
+        // Provide more specific error messages for common issues
+        if (error.code === 20003 || error.message?.includes('authenticate')) {
+            return res.status(500).json({ error: 'SMS service authentication failed. Check Twilio credentials.' });
+        }
+        if (error.code === 21211 || error.message?.includes('invalid')) {
+            return res.status(400).json({ error: 'Invalid phone number format.' });
+        }
+        if (error.code === 21608 || error.message?.includes('unverified')) {
+            return res.status(400).json({ error: 'Phone number not verified in Twilio trial account.' });
+        }
+        if (error.message?.includes('MessagingServiceSid')) {
+            return res.status(500).json({ error: 'Twilio Messaging Service not configured correctly.' });
+        }
+        if (error.message?.includes('supabase') || error.message?.includes('database')) {
+            return res.status(500).json({ error: 'Database connection error. Please try again.' });
+        }
+
         // Don't expose internal error details to clients
         return res.status(500).json({ error: 'An unexpected error occurred. Please try again.' });
     }
