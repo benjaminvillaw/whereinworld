@@ -415,7 +415,7 @@ export default async function handler(req, res) {
 
                 return res.status(200).json({
                     success: true,
-                    user: { id: user.id, phone: user.phone, displayName: user.display_name }
+                    user: { id: user.id, phone: user.phone, display_name: user.display_name }
                 });
             }
 
@@ -472,7 +472,7 @@ export default async function handler(req, res) {
 
                 return res.status(200).json({
                     success: true,
-                    user: { id: user.id, phone: user.phone, displayName: user.display_name, avatarUrl: user.avatar_url }
+                    user: { id: user.id, phone: user.phone, display_name: user.display_name, avatar_url: user.avatar_url }
                 });
             }
 
