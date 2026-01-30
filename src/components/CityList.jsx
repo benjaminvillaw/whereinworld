@@ -73,10 +73,9 @@ function getCityImage(cityName) {
 }
 
 // City videos - generated with Veo2 via Google AI Studio
-// Videos are 8-second looping clips stored locally
+// Uncomment entries to enable video backgrounds for specific cities
 const CITY_VIDEOS = {
-    'boston': '/videos/boston.mp4',
-    // More cities will be added as they are generated
+    // 'boston': '/videos/boston.mp4',
 };
 
 function getCityVideo(cityName) {
