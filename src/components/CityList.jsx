@@ -324,10 +324,16 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                         style={{ background: ghostMode ? '#1a1a2e' : 'white', cursor: 'pointer' }}
                         onClick={() => {
                             if (!ghostMode) {
+                                const userCity = userLocation?.city || 'Your Location';
+                                // Filter friends who are in the same city as the user
+                                const friendsInSameCity = friends.filter(f =>
+                                    f.city && userLocation?.city &&
+                                    f.city.toLowerCase() === userLocation.city.toLowerCase()
+                                );
                                 onSelectCity?.({
-                                    name: userLocation?.city || 'Your Location',
+                                    name: userCity,
                                     country: userLocation?.country || '',
-                                    friends: [] // User's own city, may have friends or not
+                                    friends: friendsInSameCity
                                 });
                             }
                         }}
