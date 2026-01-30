@@ -162,23 +162,37 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
         setPullDistance(0);
         setIsPulling(false);
     }, [pullDistance, onRefresh, refreshing]);
-    // Group friends by city
+    // Group friends by city (using nearest major city within 30km for grouping)
     const citiesData = useMemo(() => {
         const cityMap = new Map();
+        const PROXIMITY_THRESHOLD_KM = 30; // Group cities within 30km as same metro area
 
-        // Group friends by city
-        // Note: RPC returns city/country at top level, not nested under location
+        // Group friends by nearest major city
         friends.forEach(friend => {
-            const city = friend.city;
+            const lat = parseFloat(friend.lat);
+            const lng = parseFloat(friend.lng);
+            const originalCity = friend.city;
             const country = friend.country;
-            if (!city) return;
 
-            const key = `${city}|${country}`;
+            if (!originalCity || isNaN(lat) || isNaN(lng)) return;
+
+            // Find nearest major city
+            const nearestMajor = getNearestCity(lat, lng);
+
+            // Use major city name if within threshold, otherwise use original city
+            const displayCity = nearestMajor.distance <= PROXIMITY_THRESHOLD_KM
+                ? nearestMajor.name
+                : originalCity;
+            const displayCountry = nearestMajor.distance <= PROXIMITY_THRESHOLD_KM
+                ? nearestMajor.country
+                : country;
+
+            const key = `${displayCity}|${displayCountry}`;
 
             if (!cityMap.has(key)) {
                 cityMap.set(key, {
-                    city: city,
-                    country: country,
+                    city: displayCity,
+                    country: displayCountry,
                     friends: [],
                     weather: MOCK_WEATHER[Math.floor(Math.random() * MOCK_WEATHER.length)]
                 });
@@ -186,6 +200,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
 
             cityMap.get(key).friends.push({
                 ...friend,
+                originalCity: originalCity, // Keep track of original city for display
                 freshness: getFreshness(friend.location_updated_at),
                 updatedAt: friend.location_updated_at
             });
@@ -325,17 +340,45 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                         className="flex items-center justify-between p-4"
                         style={{ background: ghostMode ? '#1a1a2e' : 'white', cursor: 'pointer' }}
                         onClick={() => {
-                            if (!ghostMode) {
-                                const userCity = userLocation?.city || 'Your Location';
-                                // Filter friends who are in the same city as the user
-                                const friendsInSameCity = friends.filter(f =>
-                                    f.city && userLocation?.city &&
-                                    f.city.toLowerCase() === userLocation.city.toLowerCase()
-                                );
+                            if (!ghostMode && userLocation?.lat && userLocation?.lng) {
+                                const PROXIMITY_THRESHOLD_KM = 30;
+                                const userLat = parseFloat(userLocation.lat);
+                                const userLng = parseFloat(userLocation.lng);
+
+                                // Find user's nearest major city
+                                const nearestMajor = getNearestCity(userLat, userLng);
+                                const displayCity = nearestMajor.distance <= PROXIMITY_THRESHOLD_KM
+                                    ? nearestMajor.name
+                                    : (userLocation.city || 'Your Location');
+                                const displayCountry = nearestMajor.distance <= PROXIMITY_THRESHOLD_KM
+                                    ? nearestMajor.country
+                                    : (userLocation.country || '');
+
+                                // Filter friends who are in the same metro area
+                                const friendsInSameArea = friends.filter(f => {
+                                    if (!f.lat || !f.lng) return false;
+                                    const friendLat = parseFloat(f.lat);
+                                    const friendLng = parseFloat(f.lng);
+                                    if (isNaN(friendLat) || isNaN(friendLng)) return false;
+
+                                    const friendNearestMajor = getNearestCity(friendLat, friendLng);
+                                    const friendDisplayCity = friendNearestMajor.distance <= PROXIMITY_THRESHOLD_KM
+                                        ? friendNearestMajor.name
+                                        : f.city;
+
+                                    return friendDisplayCity?.toLowerCase() === displayCity.toLowerCase();
+                                });
+
                                 onSelectCity?.({
-                                    name: userCity,
+                                    name: displayCity,
+                                    country: displayCountry,
+                                    friends: friendsInSameArea
+                                });
+                            } else if (!ghostMode) {
+                                onSelectCity?.({
+                                    name: userLocation?.city || 'Your Location',
                                     country: userLocation?.country || '',
-                                    friends: friendsInSameCity
+                                    friends: []
                                 });
                             }
                         }}
