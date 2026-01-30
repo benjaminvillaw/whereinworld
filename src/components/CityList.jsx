@@ -167,16 +167,18 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
         const cityMap = new Map();
 
         // Group friends by city
+        // Note: RPC returns city/country at top level, not nested under location
         friends.forEach(friend => {
-            const location = friend.location;
-            if (!location?.city) return;
+            const city = friend.city;
+            const country = friend.country;
+            if (!city) return;
 
-            const key = `${location.city}|${location.country}`;
+            const key = `${city}|${country}`;
 
             if (!cityMap.has(key)) {
                 cityMap.set(key, {
-                    city: location.city,
-                    country: location.country,
+                    city: city,
+                    country: country,
                     friends: [],
                     weather: MOCK_WEATHER[Math.floor(Math.random() * MOCK_WEATHER.length)]
                 });
@@ -184,8 +186,8 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
 
             cityMap.get(key).friends.push({
                 ...friend,
-                freshness: getFreshness(location.updatedAt || friend.location_updated_at),
-                updatedAt: location.updatedAt || friend.location_updated_at
+                freshness: getFreshness(friend.location_updated_at),
+                updatedAt: friend.location_updated_at
             });
         });
 
