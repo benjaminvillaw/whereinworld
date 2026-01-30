@@ -264,19 +264,19 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                     </div>
                     <div style={{ lineHeight: 1.1 }}>
                         <h1 style={{
-                            fontSize: '1.1rem',
+                            fontSize: '1.3rem',
                             fontWeight: 800,
                             letterSpacing: '0.02em',
                             textTransform: 'uppercase',
-                            color: 'var(--text-secondary)',
+                            color: 'white',
                             marginBottom: '0'
                         }}>Where In</h1>
                         <h1 style={{
-                            fontSize: '1.75rem',
+                            fontSize: '2.2rem',
                             fontWeight: 900,
                             letterSpacing: '-0.02em',
                             textTransform: 'uppercase',
-                            color: 'var(--primary)',
+                            color: 'white',
                             marginTop: '-2px'
                         }}>World</h1>
                     </div>
