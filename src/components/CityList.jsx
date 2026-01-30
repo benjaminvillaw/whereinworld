@@ -126,7 +126,7 @@ function getNearestCity(lat, lng) {
     return { ...nearest, distance: Math.round(minDistance) };
 }
 
-export function CityList({ friends = [], userLocation, user, onSelectCity, onSelectFriend, onInvite, onToggleGhostMode, onUpdateLocation, onMapView, ghostMode = false, notificationsMuted = false, onToggleNotifications, onRefresh, refreshing = false }) {
+export function CityList({ friends = [], userLocation, user, onSelectCity, onSelectFriend, onInvite, onToggleGhostMode, onUpdateLocation, onMapView, onSettings, ghostMode = false, notificationsMuted = false, onToggleNotifications, onRefresh, refreshing = false }) {
     // Pull-to-refresh state
     const [pullDistance, setPullDistance] = useState(0);
     const [isPulling, setIsPulling] = useState(false);
@@ -241,9 +241,10 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
             {/* Header */}
             <header className="header">
                 <div className="flex items-center gap-3">
-                    {/* User Avatar */}
+                    {/* User Avatar - clickable to settings */}
                     <div
                         className="user-avatar-header"
+                        onClick={onSettings}
                         style={{
                             width: '2.75rem',
                             height: '2.75rem',
@@ -253,8 +254,12 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                             background: 'var(--surface-dark)',
                             display: 'flex',
                             alignItems: 'center',
-                            justifyContent: 'center'
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s, box-shadow 0.2s'
                         }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                     >
                         {user?.avatar_url ? (
                             <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

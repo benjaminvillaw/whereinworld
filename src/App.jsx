@@ -282,9 +282,16 @@ function App() {
   if (showSettings) {
     return (
       <Settings
+        user={user}
         onBack={() => setShowSettings(false)}
         ghostMode={ghostMode}
         onGhostModeChange={setGhostMode}
+        onLogout={async () => {
+          await api.signOut();
+          setUser(null);
+          setShowSettings(false);
+        }}
+        onUserUpdate={(updatedUser) => setUser(updatedUser)}
       />
     );
   }
@@ -339,6 +346,7 @@ function App() {
               await requestLocation();
               setRefreshing(false);
             }}
+            onSettings={() => setShowSettings(true)}
             onSelectCity={setSelectedCity}
             onSelectFriend={(friend) => console.log('Selected:', friend)}
             onInvite={() => setShowInvite(true)}
