@@ -28,6 +28,7 @@ function App() {
   const [ghostMode, setGhostMode] = useState(false);
   const [notificationsMuted, setNotificationsMuted] = useState(false);
   const [arrivals, setArrivals] = useState([]); // Track friend arrivals for notifications
+  const [refreshing, setRefreshing] = useState(false);
 
   // Track previous friend locations to detect changes
   const prevFriendLocations = useRef({});
@@ -331,6 +332,13 @@ function App() {
             user={user}
             ghostMode={ghostMode}
             notificationsMuted={notificationsMuted}
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await loadFriends();
+              await requestLocation();
+              setRefreshing(false);
+            }}
             onSelectCity={setSelectedCity}
             onSelectFriend={(friend) => console.log('Selected:', friend)}
             onInvite={() => setShowInvite(true)}

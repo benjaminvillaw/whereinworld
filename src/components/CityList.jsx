@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useRef, useCallback } from 'react';
 
 // City images - using high quality Unsplash images
 const CITY_IMAGES = {
@@ -126,7 +126,42 @@ function getNearestCity(lat, lng) {
     return { ...nearest, distance: Math.round(minDistance) };
 }
 
-export function CityList({ friends = [], userLocation, user, onSelectCity, onSelectFriend, onInvite, onToggleGhostMode, onUpdateLocation, onMapView, ghostMode = false, notificationsMuted = false, onToggleNotifications }) {
+export function CityList({ friends = [], userLocation, user, onSelectCity, onSelectFriend, onInvite, onToggleGhostMode, onUpdateLocation, onMapView, ghostMode = false, notificationsMuted = false, onToggleNotifications, onRefresh, refreshing = false }) {
+    // Pull-to-refresh state
+    const [pullDistance, setPullDistance] = useState(0);
+    const [isPulling, setIsPulling] = useState(false);
+    const containerRef = useRef(null);
+    const startY = useRef(0);
+    const PULL_THRESHOLD = 80;
+
+    const handleTouchStart = useCallback((e) => {
+        if (containerRef.current?.scrollTop === 0) {
+            startY.current = e.touches[0].clientY;
+            setIsPulling(true);
+        }
+    }, []);
+
+    const handleTouchMove = useCallback((e) => {
+        if (!isPulling || !containerRef.current) return;
+        if (containerRef.current.scrollTop > 0) {
+            setIsPulling(false);
+            setPullDistance(0);
+            return;
+        }
+        const currentY = e.touches[0].clientY;
+        const diff = currentY - startY.current;
+        if (diff > 0) {
+            setPullDistance(Math.min(diff * 0.5, 120));
+        }
+    }, [isPulling]);
+
+    const handleTouchEnd = useCallback(() => {
+        if (pullDistance >= PULL_THRESHOLD && onRefresh && !refreshing) {
+            onRefresh();
+        }
+        setPullDistance(0);
+        setIsPulling(false);
+    }, [pullDistance, onRefresh, refreshing]);
     // Group friends by city
     const citiesData = useMemo(() => {
         const cityMap = new Map();
@@ -167,7 +202,42 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
     }, [friends]);
 
     return (
-        <div className="city-list-container">
+        <div
+            className="city-list-container"
+            ref={containerRef}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{ overflowY: 'auto', overscrollBehavior: 'contain' }}
+        >
+            {/* Pull to refresh indicator */}
+            {(pullDistance > 0 || refreshing) && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '50%',
+                    transform: `translateX(-50%) translateY(${refreshing ? 20 : pullDistance - 40}px)`,
+                    zIndex: 100,
+                    transition: refreshing ? 'none' : 'transform 0.1s ease-out'
+                }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        background: 'var(--accent-lime)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                        animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                        opacity: pullDistance >= PULL_THRESHOLD || refreshing ? 1 : pullDistance / PULL_THRESHOLD
+                    }}>
+                        <span className="material-symbols-outlined" style={{ color: 'black', fontSize: '1.25rem' }}>
+                            {refreshing ? 'sync' : (pullDistance >= PULL_THRESHOLD ? 'arrow_downward' : 'arrow_downward')}
+                        </span>
+                    </div>
+                </div>
+            )}
             {/* Header */}
             <header className="header">
                 <div className="flex items-center gap-3">
@@ -192,9 +262,23 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                             <span className="material-symbols-outlined" style={{ color: 'var(--accent-lime)', fontSize: '1.5rem' }}>person</span>
                         )}
                     </div>
-                    <div>
-                        <h1 className="header-title text-primary">Where in World</h1>
-                        <p className="header-subtitle">Where are my friends?</p>
+                    <div style={{ lineHeight: 1.1 }}>
+                        <h1 style={{
+                            fontSize: '1.1rem',
+                            fontWeight: 800,
+                            letterSpacing: '0.02em',
+                            textTransform: 'uppercase',
+                            color: 'var(--text-secondary)',
+                            marginBottom: '0'
+                        }}>Where In</h1>
+                        <h1 style={{
+                            fontSize: '1.75rem',
+                            fontWeight: 900,
+                            letterSpacing: '-0.02em',
+                            textTransform: 'uppercase',
+                            color: 'var(--primary)',
+                            marginTop: '-2px'
+                        }}>World</h1>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
