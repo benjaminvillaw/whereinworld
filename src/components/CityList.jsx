@@ -296,11 +296,6 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                         </label>
                     </div>
                 </div>
-                {ghostMode && (
-                    <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.8rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>
-                        "The seer and the visible reciprocate one another"
-                    </p>
-                )}
             </section>
 
             {/* Section Header */}
@@ -336,6 +331,36 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
 
             {/* City Cards */}
             <div className="flex flex-col gap-6 px-6 pb-28">
+                {/* Ghost Mode Display - Large centered ghost */}
+                {ghostMode && (
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '3rem 1rem',
+                        marginTop: '2rem'
+                    }}>
+                        <svg width="180" height="180" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.9 }}>
+                            <path d="M50 10C30 10 20 30 20 50C20 70 25 90 30 90C35 90 35 80 40 80C45 80 45 90 50 90C55 90 55 80 60 80C65 80 65 90 70 90C75 90 80 70 80 50C80 30 70 10 50 10Z" stroke="rgba(204,255,0,0.8)" strokeWidth="2.5" fill="rgba(204,255,0,0.1)" />
+                            <circle cx="38" cy="45" r="5" fill="rgba(204,255,0,0.9)" />
+                            <circle cx="62" cy="45" r="5" fill="rgba(204,255,0,0.9)" />
+                            <ellipse cx="50" cy="60" rx="6" ry="8" fill="rgba(204,255,0,0.9)" />
+                        </svg>
+                        <p style={{
+                            marginTop: '1.5rem',
+                            fontSize: '0.9rem',
+                            fontStyle: 'italic',
+                            color: 'rgba(255,255,255,0.5)',
+                            textAlign: 'center',
+                            maxWidth: '280px',
+                            lineHeight: 1.6
+                        }}>
+                            "The seer and the visible reciprocate one another"
+                        </p>
+                    </div>
+                )}
+
                 {/* User's City Card - Always First (hidden in ghost mode) */}
                 {!ghostMode && userLocation?.lat && userLocation?.lng && (() => {
                     const nearestCity = getNearestCity(userLocation.lat, userLocation.lng);
