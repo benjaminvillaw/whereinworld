@@ -92,7 +92,17 @@ export function CityDetail({ city, onBack }) {
 
                     <div className="city-hero-title">
                         <h1>{cityName}</h1>
-                        <span className="badge-dark">
+                        <span style={{
+                            background: 'var(--accent-lime)',
+                            color: 'black',
+                            padding: '0.375rem 1rem',
+                            fontSize: '0.9rem',
+                            fontWeight: 800,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            border: '2px solid black',
+                            boxShadow: '2px 2px 0 0 rgba(0,0,0,0.5)'
+                        }}>
                             {friends.length} Friend{friends.length !== 1 ? 's' : ''} Active
                         </span>
                     </div>
@@ -127,9 +137,13 @@ export function CityDetail({ city, onBack }) {
                                 style={{ opacity: active ? 1 : 0.8 }}
                             >
                                 <div className={`friend-item-avatar ${active ? 'avatar-status' : 'avatar-status offline'}`}>
-                                    <div className="avatar avatar-lg" style={{ background: avatarColor }}>
-                                        {friend.displayName?.charAt(0)?.toUpperCase() ||
-                                            friend.display_name?.charAt(0)?.toUpperCase() || '?'}
+                                    <div className="avatar avatar-lg" style={{ background: friend.avatar_url ? 'transparent' : avatarColor }}>
+                                        {friend.avatar_url ? (
+                                            <img src={friend.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                        ) : (
+                                            friend.displayName?.charAt(0)?.toUpperCase() ||
+                                            friend.display_name?.charAt(0)?.toUpperCase() || '?'
+                                        )}
                                     </div>
                                 </div>
 

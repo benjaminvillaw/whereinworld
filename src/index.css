@@ -409,6 +409,11 @@ body {
   box-shadow: var(--shadow-hard-sm);
 }
 
+.badge-tag-large {
+  font-size: 0.975rem;
+  padding: 0.375rem 1rem;
+}
+
 /* ============================================
    AVATAR STYLES
    ============================================ */

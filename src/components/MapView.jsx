@@ -117,7 +117,7 @@ export function MapView({ friends = [], userLocation, onSelectCity }) {
                     {citiesData.map((city, idx) => {
                         const pos = projectToSVG(city.lat, city.lng, width, height);
                         const friendCount = city.friends.length;
-                        const size = Math.min(30, 12 + friendCount * 4);
+                        const size = Math.min(35, 14 + friendCount * 5);
 
                         return (
                             <g
@@ -131,54 +131,32 @@ export function MapView({ friends = [], userLocation, onSelectCity }) {
                                     r={size}
                                     fill={city.color}
                                     stroke="black"
-                                    strokeWidth="2"
-                                    opacity="0.9"
+                                    strokeWidth="3"
+                                    opacity="0.95"
                                 />
                                 <text
                                     textAnchor="middle"
-                                    y={size + 14}
-                                    fill="white"
-                                    fontSize="10"
-                                    fontWeight="bold"
-                                    textTransform="uppercase"
-                                >
-                                    {city.city}
-                                </text>
-                                <text
-                                    textAnchor="middle"
-                                    y="4"
+                                    y="5"
                                     fill="black"
-                                    fontSize="11"
+                                    fontSize="14"
                                     fontWeight="900"
                                 >
                                     {friendCount}
+                                </text>
+                                <text
+                                    textAnchor="middle"
+                                    y={size + 16}
+                                    fill="white"
+                                    fontSize="11"
+                                    fontWeight="800"
+                                    style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                                >
+                                    {city.city}
                                 </text>
                             </g>
                         );
                     })}
                 </svg>
-            </div>
-
-            {/* City list below map */}
-            <div className="map-city-list">
-                {citiesData.length === 0 ? (
-                    <p className="no-friends-msg">No friends with locations yet</p>
-                ) : (
-                    citiesData.map(city => (
-                        <div
-                            key={city.city}
-                            className="map-city-item"
-                            onClick={() => onSelectCity?.(city)}
-                        >
-                            <div className="city-color-dot" style={{ background: city.color }} />
-                            <div className="city-info">
-                                <span className="city-name">{city.city}</span>
-                                <span className="city-country">{city.country}</span>
-                            </div>
-                            <div className="friend-count">{city.friends.length} friends</div>
-                        </div>
-                    ))
-                )}
             </div>
 
             <style>{`
@@ -207,16 +185,21 @@ export function MapView({ friends = [], userLocation, onSelectCity }) {
                 }
                 
                 .map-svg-container {
+                    flex: 1;
                     width: 100%;
-                    aspect-ratio: 16/9;
+                    min-height: 60vh;
                     border: 3px solid black;
                     background: var(--surface-dark);
-                    overflow: hidden;
+                    overflow: auto;
+                    touch-action: pan-x pan-y pinch-zoom;
+                    -webkit-overflow-scrolling: touch;
                 }
                 
                 .world-map-svg {
                     width: 100%;
                     height: 100%;
+                    min-width: 600px;
+                    min-height: 400px;
                 }
                 
                 .city-marker {
@@ -224,7 +207,7 @@ export function MapView({ friends = [], userLocation, onSelectCity }) {
                 }
                 
                 .city-marker:hover {
-                    transform: scale(1.1);
+                    transform: scale(1.15);
                 }
                 
                 .pulse-marker {
@@ -232,67 +215,8 @@ export function MapView({ friends = [], userLocation, onSelectCity }) {
                 }
                 
                 @keyframes pulse {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.7; }
-                }
-                
-                .map-city-list {
-                    margin-top: 1.5rem;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.75rem;
-                }
-                
-                .map-city-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    padding: 1rem;
-                    background: var(--surface-dark);
-                    border: 2px solid black;
-                    cursor: pointer;
-                    transition: transform 0.2s;
-                }
-                
-                .map-city-item:hover {
-                    transform: translateX(4px);
-                }
-                
-                .city-color-dot {
-                    width: 1rem;
-                    height: 1rem;
-                    border-radius: 50%;
-                    border: 2px solid black;
-                    flex-shrink: 0;
-                }
-                
-                .city-info {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                }
-                
-                .city-name {
-                    font-weight: 800;
-                    text-transform: uppercase;
-                    color: white;
-                }
-                
-                .city-country {
-                    font-size: 0.75rem;
-                    color: var(--text-muted);
-                }
-                
-                .friend-count {
-                    font-weight: 700;
-                    color: var(--accent-lime);
-                    font-size: 0.875rem;
-                }
-                
-                .no-friends-msg {
-                    text-align: center;
-                    color: var(--text-muted);
-                    padding: 2rem;
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.8; transform: scale(1.1); }
                 }
             `}</style>
         </div>

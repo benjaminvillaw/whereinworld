@@ -228,66 +228,80 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
             </header>
 
             {/* User Location Card */}
-            {userLocation?.city && (
-                <section className="px-6 mb-6">
-                    <div className="card-hard" style={{ overflow: 'hidden' }}>
-                        <div
-                            className="flex items-center justify-between p-4"
-                            style={{ background: 'white', cursor: 'pointer' }}
-                            onClick={onUpdateLocation}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div style={{
-                                    width: '2.5rem',
-                                    height: '2.5rem',
-                                    background: 'black',
-                                    color: 'var(--accent-lime)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    border: '2px solid black'
-                                }}>
+            <section className="px-6 mb-6">
+                <div className="card-hard" style={{ overflow: 'hidden' }}>
+                    <div
+                        className="flex items-center justify-between p-4"
+                        style={{ background: ghostMode ? '#1a1a2e' : 'white', cursor: 'pointer' }}
+                        onClick={ghostMode ? undefined : onUpdateLocation}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div style={{
+                                width: '2.5rem',
+                                height: '2.5rem',
+                                background: ghostMode ? 'transparent' : 'black',
+                                color: ghostMode ? 'white' : 'var(--accent-lime)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: ghostMode ? 'none' : '2px solid black'
+                            }}>
+                                {ghostMode ? (
+                                    <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M50 10C30 10 20 30 20 50C20 70 25 90 30 90C35 90 35 80 40 80C45 80 45 90 50 90C55 90 55 80 60 80C65 80 65 90 70 90C75 90 80 70 80 50C80 30 70 10 50 10Z" stroke="white" strokeWidth="3" fill="none" />
+                                        <circle cx="38" cy="45" r="5" fill="white" />
+                                        <circle cx="62" cy="45" r="5" fill="white" />
+                                        <ellipse cx="50" cy="60" rx="6" ry="8" fill="white" />
+                                    </svg>
+                                ) : (
                                     <span className="material-symbols-outlined filled">my_location</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span style={{ fontSize: '0.625rem', fontWeight: 900, color: 'black', textTransform: 'uppercase', letterSpacing: '0.1em' }}>You are in</span>
-                                    <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'black', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 }}>{userLocation.city}</span>
-                                </div>
+                                )}
                             </div>
-                            <span className="material-symbols-outlined" style={{ color: 'black' }}>refresh</span>
-                        </div>
-                        <div className="flex items-center justify-between p-4" style={{ borderTop: '2px solid black', background: 'var(--graphic-paper)' }}>
-                            <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined" style={{ color: 'black' }}>visibility_off</span>
-                                <span style={{ fontSize: '1.125rem', fontWeight: 800, color: 'black', textTransform: 'uppercase' }}>Ghost Mode</span>
+                            <div className="flex flex-col">
+                                <span style={{ fontSize: '0.625rem', fontWeight: 900, color: ghostMode ? 'rgba(255,255,255,0.6)' : 'black', textTransform: 'uppercase', letterSpacing: '0.1em' }}>You are in</span>
+                                <span style={{ fontSize: '1.25rem', fontWeight: 900, color: ghostMode ? 'white' : 'black', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                                    {ghostMode ? 'The Bermuda Triangle' : (userLocation?.city || 'Unknown')}
+                                </span>
                             </div>
-                            <label
-                                style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
-                                onClick={(e) => { e.preventDefault(); onToggleGhostMode?.(); }}
-                            >
-                                <div style={{
-                                    width: '4rem',
-                                    height: '2rem',
-                                    background: ghostMode ? 'var(--accent-lime)' : 'white',
-                                    border: '2px solid black',
-                                    position: 'relative',
-                                    transition: 'background 0.2s'
-                                }}>
-                                    <div style={{
-                                        position: 'absolute',
-                                        left: ghostMode ? '2.25rem' : '0.25rem',
-                                        top: '0.25rem',
-                                        width: '1.25rem',
-                                        height: '1.25rem',
-                                        background: 'black',
-                                        transition: 'left 0.2s'
-                                    }}></div>
-                                </div>
-                            </label>
                         </div>
+                        {!ghostMode && <span className="material-symbols-outlined" style={{ color: 'black' }}>refresh</span>}
                     </div>
-                </section>
-            )}
+                    <div className="flex items-center justify-between p-4" style={{ borderTop: '2px solid black', background: ghostMode ? '#0d0d1a' : 'var(--graphic-paper)' }}>
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined" style={{ color: ghostMode ? 'var(--accent-lime)' : 'black' }}>visibility_off</span>
+                            <span style={{ fontSize: '1.125rem', fontWeight: 800, color: ghostMode ? 'var(--accent-lime)' : 'black', textTransform: 'uppercase' }}>Ghost Mode</span>
+                        </div>
+                        <label
+                            style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                            onClick={(e) => { e.preventDefault(); onToggleGhostMode?.(); }}
+                        >
+                            <div style={{
+                                width: '4rem',
+                                height: '2rem',
+                                background: ghostMode ? 'var(--accent-lime)' : 'white',
+                                border: '2px solid black',
+                                position: 'relative',
+                                transition: 'background 0.2s'
+                            }}>
+                                <div style={{
+                                    position: 'absolute',
+                                    left: ghostMode ? '2.25rem' : '0.25rem',
+                                    top: '0.25rem',
+                                    width: '1.25rem',
+                                    height: '1.25rem',
+                                    background: 'black',
+                                    transition: 'left 0.2s'
+                                }}></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                {ghostMode && (
+                    <p style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.8rem', fontStyle: 'italic', color: 'rgba(255,255,255,0.5)' }}>
+                        "The seer and the visible reciprocate one another"
+                    </p>
+                )}
+            </section>
 
             {/* Section Header */}
             <div className="flex items-center justify-between px-6 py-4">
@@ -322,8 +336,8 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
 
             {/* City Cards */}
             <div className="flex flex-col gap-6 px-6 pb-28">
-                {/* User's City Card - Always First */}
-                {userLocation?.lat && userLocation?.lng && (() => {
+                {/* User's City Card - Always First (hidden in ghost mode) */}
+                {!ghostMode && userLocation?.lat && userLocation?.lng && (() => {
                     const nearestCity = getNearestCity(userLocation.lat, userLocation.lng);
                     return (
                         <div className="city-card your-city-card">
@@ -352,17 +366,13 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                             <div className="city-card-content" style={{ background: '#CCFF00', paddingBottom: '1.5rem' }}>
                                 <div className="flex items-start justify-between mb-4">
                                     <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="material-symbols-outlined filled" style={{ fontSize: '1rem' }}>my_location</span>
-                                            <span style={{ fontSize: '0.625rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Your Location</span>
-                                        </div>
                                         <h3 className="city-card-title">{nearestCity.name}</h3>
                                         <p className="city-card-weather">
                                             <span className="material-symbols-outlined" style={{ fontSize: '0.875rem' }}>location_on</span>
                                             Near {nearestCity.country}
                                         </p>
                                     </div>
-                                    <div className="badge-tag" style={{ transform: 'rotate(-2deg)', background: 'black', color: '#CCFF00' }}>
+                                    <div className="badge-tag badge-tag-large" style={{ transform: 'rotate(-2deg)', background: 'black', color: '#CCFF00' }}>
                                         📍 You
                                     </div>
                                 </div>
@@ -423,7 +433,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                                 {cityData.weather}
                                             </p>
                                         </div>
-                                        <div className="badge-tag" style={{ transform: `rotate(${tagRotation}deg)` }}>
+                                        <div className="badge-tag badge-tag-large" style={{ transform: `rotate(${tagRotation}deg)` }}>
                                             {cityData.friends.length} Friend{cityData.friends.length !== 1 ? 's' : ''}
                                         </div>
                                     </div>
