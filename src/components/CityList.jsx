@@ -322,7 +322,15 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                     <div
                         className="flex items-center justify-between p-4"
                         style={{ background: ghostMode ? '#1a1a2e' : 'white', cursor: 'pointer' }}
-                        onClick={ghostMode ? undefined : onUpdateLocation}
+                        onClick={() => {
+                            if (!ghostMode && userLocation?.city) {
+                                onSelectCity?.({
+                                    name: userLocation.city,
+                                    country: userLocation.country || '',
+                                    friends: [] // User's own city, may have friends or not
+                                });
+                            }
+                        }}
                     >
                         <div className="flex items-center gap-3">
                             <div style={{
@@ -353,7 +361,15 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                 </span>
                             </div>
                         </div>
-                        {!ghostMode && <span className="material-symbols-outlined" style={{ color: 'black' }}>refresh</span>}
+                        {!ghostMode && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onUpdateLocation?.(); }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem' }}
+                                title="Refresh location"
+                            >
+                                <span className="material-symbols-outlined" style={{ color: 'black' }}>refresh</span>
+                            </button>
+                        )}
                     </div>
                     <div className="flex items-center justify-between p-4" style={{ borderTop: '2px solid black', background: ghostMode ? '#0d0d1a' : 'var(--graphic-paper)' }}>
                         <div className="flex items-center gap-2">

@@ -356,7 +356,12 @@ export default async function handler(req, res) {
                 }
 
                 return res.status(200).json({
-                    user: { id: session.users.id, phone: session.users.phone, displayName: session.users.display_name }
+                    user: {
+                        id: session.users.id,
+                        phone: session.users.phone,
+                        display_name: session.users.display_name,
+                        avatar_url: session.users.avatar_url
+                    }
                 });
             }
 
