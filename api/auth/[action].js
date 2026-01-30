@@ -496,6 +496,62 @@ export default async function handler(req, res) {
         }
 
         // ============================================
+        // UPDATE LOCATION
+        // ============================================
+        if (action === 'update-location' && req.method === 'POST') {
+            const token = req.headers.authorization?.replace('Bearer ', '');
+            const { city, country, lat, lng } = req.body;
+
+            if (!token) {
+                return res.status(401).json({ error: 'Not authenticated' });
+            }
+
+            if (!city || lat === undefined || lng === undefined) {
+                return res.status(400).json({ error: 'Missing location data' });
+            }
+
+            if (supabase) {
+                // Verify session
+                const { data: session } = await supabase
+                    .from('sessions')
+                    .select('*, users(*)')
+                    .eq('token', token)
+                    .gt('expires_at', new Date().toISOString())
+                    .single();
+
+                if (!session?.users) {
+                    return res.status(401).json({ error: 'Session expired' });
+                }
+
+                // Upsert location (insert or update)
+                const { error: locationError } = await supabase
+                    .from('locations')
+                    .upsert({
+                        user_id: session.users.id,
+                        city,
+                        country: country || '',
+                        lat,
+                        lng,
+                        updated_at: new Date().toISOString()
+                    }, {
+                        onConflict: 'user_id'
+                    });
+
+                if (locationError) {
+                    console.error('Location update error:', locationError);
+                    return res.status(500).json({ error: 'Failed to update location' });
+                }
+
+                return res.status(200).json({
+                    success: true,
+                    location: { city, country, lat, lng }
+                });
+            }
+
+            return res.status(500).json({ error: 'Database not configured' });
+        }
+
+        // ============================================
         // HEALTH CHECK
         // ============================================
         if (action === 'health') {

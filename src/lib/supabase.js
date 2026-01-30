@@ -363,6 +363,21 @@ export const api = {
         const user = await this.getCurrentUser();
         if (!user) throw new Error('Not authenticated');
 
+        if (hasBackend) {
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/auth/update-location`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(location)
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to update location');
+            return data.location;
+        }
+
         if (supabase) {
             const { error } = await supabase
                 .from('locations')
