@@ -72,6 +72,20 @@ function getCityImage(cityName) {
     return `https://source.unsplash.com/800x600/?${encodedCity}`;
 }
 
+// City videos - generated with Veo3 (placeholder URLs - replace with actual generated videos)
+// Videos should be 8-10 second looping clips, 1080p, hosted on your CDN
+const CITY_VIDEOS = {
+    // Uncomment and add your Veo3-generated video URLs here:
+    // 'boston': 'https://your-cdn.com/cities/boston.mp4',
+    // 'new york': 'https://your-cdn.com/cities/new-york.mp4',
+    // 'san francisco': 'https://your-cdn.com/cities/san-francisco.mp4',
+};
+
+function getCityVideo(cityName) {
+    const key = cityName?.toLowerCase();
+    return CITY_VIDEOS[key] || null;
+}
+
 function getWeatherIcon(weather) {
     const key = weather?.toLowerCase() || 'default';
     return WEATHER_ICONS[key] || WEATHER_ICONS.default;
@@ -536,13 +550,24 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                 className="city-card"
                                 onClick={() => onSelectCity?.(cityData)}
                             >
-                                {/* Background Image */}
+                                {/* Background Image or Video */}
                                 <div className="city-card-image">
-                                    <img
-                                        src={getCityImage(cityData.city)}
-                                        alt={cityData.city}
-                                        loading="lazy"
-                                    />
+                                    {getCityVideo(cityData.city) ? (
+                                        <video
+                                            src={getCityVideo(cityData.city)}
+                                            autoPlay
+                                            muted
+                                            loop
+                                            playsInline
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                        />
+                                    ) : (
+                                        <img
+                                            src={getCityImage(cityData.city)}
+                                            alt={cityData.city}
+                                            loading="lazy"
+                                        />
+                                    )}
                                     <div style={{
                                         position: 'absolute',
                                         inset: 0,
