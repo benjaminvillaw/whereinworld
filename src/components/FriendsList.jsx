@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { BottomNav } from './BottomNav';
 
 // Calculate distance between two coordinates in km
 function getDistance(lat1, lng1, lat2, lng2) {
@@ -26,6 +27,13 @@ function timeAgo(dateString) {
   return new Date(dateString).toLocaleDateString();
 }
 
+// Format date added
+function formatAddedDate(dateString) {
+  if (!dateString) return 'Unknown';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 // Get freshness level
 function getFreshness(updatedAt) {
   if (!updatedAt) return 0;
@@ -35,9 +43,25 @@ function getFreshness(updatedAt) {
   return 1 - (hoursAgo - 24) / 48;
 }
 
-export function FriendsList({ friends = [], userLocation, onSelectFriend }) {
+export function FriendsList({ friends = [], userLocation, onSelectFriend, onBack, onSettings, onShowCities, onShowMap, onToggleHiddenFromFriend, ghostMode = false, onInvite, onGoToUserLocation }) {
   const [filter, setFilter] = useState('all'); // 'all', 'nearby', 'stale'
-  const [sortBy, setSortBy] = useState('distance'); // 'distance', 'recent', 'name'
+  const [sortBy, setSortBy] = useState('recent'); // 'distance', 'recent', 'name', 'added'
+  const [hiddenFromFriends, setHiddenFromFriends] = useState(() => {
+    // Load from localStorage
+    const saved = localStorage.getItem('whereinworld_hidden_from_friends');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  // Toggle hidden from specific friend
+  const toggleHiddenFromFriend = (friendId) => {
+    const newHidden = {
+      ...hiddenFromFriends,
+      [friendId]: !hiddenFromFriends[friendId]
+    };
+    setHiddenFromFriends(newHidden);
+    localStorage.setItem('whereinworld_hidden_from_friends', JSON.stringify(newHidden));
+    onToggleHiddenFromFriend?.(friendId, !hiddenFromFriends[friendId]);
+  };
 
   // Process friends with distance and sorting
   const processedFriends = useMemo(() => {
@@ -56,7 +80,8 @@ export function FriendsList({ friends = [], userLocation, onSelectFriend }) {
         ...friend,
         distance,
         freshness,
-        isNearby: distance !== null && distance <= 50 // Within 50km
+        isNearby: distance !== null && distance <= 50, // Within 50km
+        isHiddenFrom: hiddenFromFriends[friend.id] || false
       };
     });
 
@@ -82,65 +107,94 @@ export function FriendsList({ friends = [], userLocation, onSelectFriend }) {
       if (sortBy === 'name') {
         return (a.displayName || '').localeCompare(b.displayName || '');
       }
+      if (sortBy === 'added') {
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return bTime - aTime;
+      }
       return 0;
     });
 
     return result;
-  }, [friends, userLocation, filter, sortBy]);
+  }, [friends, userLocation, filter, sortBy, hiddenFromFriends]);
 
   const nearbyCount = processedFriends.filter(f => f.isNearby).length;
 
   return (
-    <div className="friends-list">
-      {/* Header with filters */}
-      <div className="friends-header">
-        <h3 className="friends-title">
-          Friends
-          <span className="friends-count">{friends.length}</span>
-        </h3>
-
-        <div className="friends-filters">
-          <select
-            className="filter-select"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          >
-            <option value="all">All Friends</option>
-            <option value="nearby">Nearby ({nearbyCount})</option>
-            <option value="stale">Need Update</option>
-          </select>
-
-          <select
-            className="filter-select"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-          >
-            <option value="distance">By Distance</option>
-            <option value="recent">By Recent</option>
-            <option value="name">By Name</option>
-          </select>
-        </div>
+    <div className="friends-list-page">
+      {/* Header */}
+      <div className="friends-header-bar">
+        <button className="back-btn" onClick={onBack} aria-label="Go back">
+          <span className="material-symbols-outlined">arrow_back</span>
+        </button>
+        <h1 className="page-title">Friends</h1>
+        <div style={{ width: '2.5rem' }} /> {/* Spacer for alignment */}
       </div>
 
-      {/* Nearby alert */}
-      {nearbyCount > 0 && filter !== 'nearby' && (
-        <div className="nearby-alert" onClick={() => setFilter('nearby')}>
-          <span className="nearby-icon">📍</span>
-          <span><strong>{nearbyCount}</strong> friend{nearbyCount > 1 ? 's' : ''} nearby!</span>
-          <span className="nearby-cta">View →</span>
-        </div>
-      )}
+      {/* Filters */}
+      <div className="friends-filters-bar">
+        <select
+          className="filter-select"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        >
+          <option value="all">All Friends ({friends.length})</option>
+          <option value="nearby">Nearby ({nearbyCount})</option>
+          <option value="stale">Need Update</option>
+        </select>
+
+        <select
+          className="filter-select"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+        >
+          <option value="recent">Last Location</option>
+          <option value="added">Date Added</option>
+          <option value="distance">Distance</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
 
       {/* Friends list */}
       <div className="friends-scroll">
-        {processedFriends.length === 0 ? (
+        {ghostMode ? (
+          /* Ghost Mode Active - Show Ghost */
+          <div className="friends-empty ghost-mode-empty">
+            <div className="ghost-icon-large">
+              <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M50 10C30 10 20 30 20 50C20 70 25 90 30 90C35 90 35 80 40 80C45 80 45 90 50 90C55 90 55 80 60 80C65 80 65 90 70 90C75 90 80 70 80 50C80 30 70 10 50 10Z" stroke="var(--accent-lime)" strokeWidth="3" fill="none" />
+                <circle cx="38" cy="45" r="5" fill="var(--accent-lime)" />
+                <circle cx="62" cy="45" r="5" fill="var(--accent-lime)" />
+                <ellipse cx="50" cy="60" rx="6" ry="8" fill="var(--accent-lime)" />
+              </svg>
+            </div>
+            <h3 className="ghost-mode-title">Ghost Mode Active</h3>
+            <p className="text-muted text-sm">
+              You're invisible! Disable ghost mode to see your friends' locations.
+            </p>
+          </div>
+        ) : friends.length === 0 ? (
+          /* No Friends Added - Show Invite */
           <div className="friends-empty">
             <div className="empty-icon">👥</div>
-            <p>No friends to show</p>
+            <p style={{ fontWeight: 700, fontSize: '1.125rem', marginBottom: '0.5rem' }}>No friends yet</p>
+            <p className="text-muted text-sm" style={{ marginBottom: '1.5rem' }}>
+              Invite friends to see where they are in the world
+            </p>
+            <button className="btn-invite-friends" onClick={onInvite}>
+              <span className="material-symbols-outlined">person_add</span>
+              Invite Friends
+            </button>
+          </div>
+        ) : processedFriends.length === 0 ? (
+          /* Filter returned no results */
+          <div className="friends-empty">
+            <div className="empty-icon">🔍</div>
+            <p>No friends match this filter</p>
             <p className="text-muted text-sm">
               {filter === 'nearby'
                 ? 'No friends within 50km'
-                : 'Sync your contacts to find friends'}
+                : 'Try a different filter'}
             </p>
           </div>
         ) : (
@@ -151,31 +205,41 @@ export function FriendsList({ friends = [], userLocation, onSelectFriend }) {
             return (
               <div
                 key={friend.id}
-                className={`friend-item fade-in ${friend.isNearby ? 'nearby' : ''} ${isGhost ? 'ghost' : ''} ${isStale ? 'stale-item' : ''}`}
-                onClick={() => onSelectFriend?.(friend)}
+                className={`friend-card ${friend.isNearby ? 'nearby' : ''} ${isGhost ? 'ghost' : ''} ${friend.isHiddenFrom ? 'hidden-from' : ''}`}
               >
-                <div
-                  className="friend-avatar"
-                  style={{ opacity: isGhost ? 0.4 : (0.4 + friend.freshness * 0.6) }}
-                >
-                  {friend.displayName?.charAt(0)?.toUpperCase() || '?'}
-                </div>
-
-                <div className="friend-info">
-                  <div className="friend-name">
-                    {friend.displayName || 'Unknown'}
-                    {isGhost && <span className="ghost-badge" title="This friend is in ghost mode">👻</span>}
+                <div className="friend-card-main" onClick={() => onSelectFriend?.(friend)}>
+                  <div
+                    className="friend-avatar"
+                    style={{ opacity: isGhost ? 0.4 : (0.4 + friend.freshness * 0.6) }}
+                  >
+                    {friend.avatar_url ? (
+                      <img src={friend.avatar_url} alt="" />
+                    ) : (
+                      friend.displayName?.charAt(0)?.toUpperCase() || '?'
+                    )}
                   </div>
-                  <div className="friend-location">
-                    📍 {friend.location?.city || 'Unknown'}, {friend.location?.country || ''}
-                    {isGhost && <span className="last-seen-label"> (Last seen)</span>}
-                  </div>
-                </div>
 
-                <div className="friend-meta">
-                  {friend.isNearby && (
-                    <span className="badge badge-success">Nearby</span>
-                  )}
+                  <div className="friend-info">
+                    <div className="friend-name-row">
+                      <span className="friend-name">
+                        {friend.displayName || 'Unknown'}
+                      </span>
+                      {isGhost && <span className="ghost-badge" title="This friend is in ghost mode">👻</span>}
+                      {friend.isNearby && <span className="nearby-badge">Nearby</span>}
+                    </div>
+                    <div className="friend-location">
+                      📍 {friend.location?.city || 'Unknown'}{friend.location?.country ? `, ${friend.location.country}` : ''}
+                    </div>
+                    <div className="friend-meta-row">
+                      <span className="friend-added">
+                        Added {formatAddedDate(friend.created_at || friend.addedAt)}
+                      </span>
+                      <span className="friend-updated">
+                        • Location {timeAgo(friend.location?.updatedAt)}
+                      </span>
+                    </div>
+                  </div>
+
                   {friend.distance !== null && (
                     <span className="friend-distance">
                       {friend.distance < 1
@@ -185,244 +249,335 @@ export function FriendsList({ friends = [], userLocation, onSelectFriend }) {
                           : `${Math.round(friend.distance / 100) * 100}+ km`}
                     </span>
                   )}
-                  <span className={`friend-updated ${friend.freshness < 0.5 ? 'stale' : ''}`}>
-                    {timeAgo(friend.location?.updatedAt)}
-                  </span>
                 </div>
 
-                <a
-                  href={`sms:${(friend.phone || '').replace(/\D/g, '')}`}
-                  className="friend-message-btn"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span className="material-symbols-outlined">chat</span>
-                </a>
+                {/* Hide Location Toggle */}
+                <div className="friend-card-actions">
+                  <label className="hide-toggle">
+                    <span className="hide-toggle-label">
+                      {friend.isHiddenFrom ? 'Hidden' : 'Visible'}
+                    </span>
+                    <button
+                      className={`toggle-btn ${friend.isHiddenFrom ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleHiddenFromFriend(friend.id);
+                      }}
+                      aria-label={friend.isHiddenFrom ? 'Show location to this friend' : 'Hide location from this friend'}
+                    >
+                      <span className="toggle-track">
+                        <span className="toggle-thumb" />
+                      </span>
+                    </button>
+                  </label>
+                </div>
               </div>
-            )
+            );
           })
         )}
       </div>
 
+      {/* Bottom Navigation */}
+      <BottomNav
+        activeTab="friends"
+        onTabChange={(tab) => {
+          if (tab === 'cities') onShowCities?.();
+          if (tab === 'map') onShowMap?.();
+          if (tab === 'you') onSettings?.();
+        }}
+        onLocationPress={onGoToUserLocation}
+      />
+
       <style>{`
-        .friends-list {
+        .friends-list-page {
           display: flex;
           flex-direction: column;
-          height: 100%;
-          background: var(--bg-secondary);
-          border-radius: var(--radius-lg);
-          overflow: hidden;
+          min-height: 100vh;
+          width: 100%;
+          max-width: 28rem;
+          margin: 0 auto;
+          background: var(--background-dark);
+          padding-bottom: 6rem;
         }
-        
-        .friends-header {
-          padding: 20px;
-          border-bottom: 1px solid var(--border-subtle);
-        }
-        
-        .friends-title {
+
+        .friends-header-bar {
           display: flex;
           align-items: center;
-          gap: 10px;
-          margin: 0 0 12px 0;
-          font-size: 18px;
-          font-weight: 700;
+          justify-content: space-between;
+          padding: 1rem;
+          background: var(--background-dark);
         }
-        
-        .friends-count {
-          background: var(--bg-tertiary);
-          color: var(--text-secondary);
-          padding: 2px 10px;
-          border-radius: var(--radius-full);
-          font-size: 13px;
-          font-weight: 600;
-        }
-        
-        .friends-filters {
+
+        .back-btn {
           display: flex;
-          gap: 8px;
+          align-items: center;
+          justify-content: center;
+          width: 2.5rem;
+          height: 2.5rem;
+          background: none;
+          border: none;
+          color: var(--accent-lime);
+          cursor: pointer;
+          border-radius: 50%;
         }
-        
+
+        .page-title {
+          font-size: 1.5rem;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          font-style: italic;
+          transform: skewX(-6deg);
+          color: white;
+          margin: 0;
+        }
+
+        .friends-filters-bar {
+          display: flex;
+          gap: 0.5rem;
+          padding: 0 1rem 1rem;
+        }
+
         .filter-select {
           flex: 1;
-          padding: 8px 12px;
-          background: var(--bg-tertiary);
-          border: 1px solid var(--border-subtle);
-          border-radius: var(--radius-sm);
-          color: var(--text-primary);
-          font-size: 13px;
+          padding: 0.625rem 0.75rem;
+          background: var(--surface-border);
+          border: 2px solid black;
+          color: white;
+          font-size: 0.8125rem;
+          font-weight: 600;
           cursor: pointer;
           outline: none;
         }
-        
-        .filter-select:focus {
-          border-color: var(--accent-primary);
-        }
-        
-        .nearby-alert {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 12px 20px;
-          background: rgba(16, 185, 129, 0.1);
-          border-bottom: 1px solid var(--border-subtle);
-          cursor: pointer;
-          transition: background var(--transition-fast);
-        }
-        
-        .nearby-alert:hover {
-          background: rgba(16, 185, 129, 0.15);
-        }
-        
-        .nearby-icon {
-          font-size: 18px;
-        }
-        
-        .nearby-cta {
-          margin-left: auto;
-          color: var(--success);
-          font-weight: 600;
-        }
-        
+
         .friends-scroll {
           flex: 1;
           overflow-y: auto;
-          padding: 12px;
+          padding: 0 1rem;
         }
-        
+
         .friends-empty {
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 40px 20px;
+          padding: 3rem 1.5rem;
           text-align: center;
+          color: var(--text-muted);
         }
-        
+
         .empty-icon {
-          font-size: 48px;
-          margin-bottom: 16px;
+          font-size: 3rem;
+          margin-bottom: 1rem;
           opacity: 0.5;
         }
-        
-        .friend-item {
+
+        .ghost-mode-empty {
+          padding: 4rem 1.5rem;
+        }
+
+        .ghost-icon-large {
+          margin-bottom: 1.5rem;
+          animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+
+        .ghost-mode-title {
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: var(--accent-lime);
+          text-transform: uppercase;
+          margin-bottom: 0.5rem;
+        }
+
+        .btn-invite-friends {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 14px;
-          margin-bottom: 8px;
-          background: var(--bg-tertiary);
-          border-radius: var(--radius-md);
+          justify-content: center;
+          gap: 0.5rem;
+          padding: 1rem 2rem;
+          background: var(--accent-lime);
+          border: 2px solid black;
+          color: black;
+          font-weight: 800;
+          font-size: 0.875rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
           cursor: pointer;
-          transition: all var(--transition-fast);
-          border: 1px solid transparent;
+          transition: all 0.2s ease;
         }
-        
-        .friend-item:hover {
-          background: var(--bg-glass-hover);
-          border-color: var(--border-accent);
+
+        .btn-invite-friends:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(204, 255, 0, 0.3);
         }
-        
-        .friend-item.nearby {
-          border-color: rgba(16, 185, 129, 0.3);
+
+        .btn-invite-friends .material-symbols-outlined {
+          font-size: 1.25rem;
         }
-        
+
+        .friend-card {
+          background: var(--surface-card);
+          border: 2px solid black;
+          margin-bottom: 0.75rem;
+          transition: all 0.2s ease;
+        }
+
+        .friend-card.nearby {
+          border-color: var(--accent-lime);
+        }
+
+        .friend-card.hidden-from {
+          opacity: 0.6;
+        }
+
+        .friend-card-main {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          padding: 1rem;
+          cursor: pointer;
+        }
+
         .friend-avatar {
-          width: 44px;
-          height: 44px;
+          width: 3rem;
+          height: 3rem;
           border-radius: 50%;
-          background: var(--accent-gradient);
+          background: linear-gradient(135deg, var(--accent-coral), var(--accent-lime));
           display: flex;
           align-items: center;
           justify-content: center;
           font-weight: 700;
-          font-size: 18px;
-          color: white;
+          font-size: 1.25rem;
+          color: black;
           flex-shrink: 0;
+          overflow: hidden;
         }
-        
+
+        .friend-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
         .friend-info {
           flex: 1;
           min-width: 0;
         }
-        
+
+        .friend-name-row {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 0.125rem;
+        }
+
         .friend-name {
-          font-weight: 600;
-          margin-bottom: 2px;
+          font-weight: 700;
+          font-size: 0.9375rem;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        
+
+        .ghost-badge {
+          font-size: 0.875rem;
+        }
+
+        .nearby-badge {
+          font-size: 0.625rem;
+          font-weight: 700;
+          background: var(--accent-lime);
+          color: black;
+          padding: 0.125rem 0.375rem;
+          text-transform: uppercase;
+        }
+
         .friend-location {
-          font-size: 13px;
+          font-size: 0.8125rem;
           color: var(--text-secondary);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
+          margin-bottom: 0.25rem;
         }
-        
-        .friend-meta {
+
+        .friend-meta-row {
           display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 4px;
+          gap: 0.375rem;
+          font-size: 0.6875rem;
+          color: var(--text-muted);
+        }
+
+        .friend-distance {
+          font-size: 0.75rem;
+          color: var(--text-muted);
+          font-weight: 600;
           flex-shrink: 0;
         }
-        
-        .friend-distance {
-          font-size: 12px;
-          color: var(--text-muted);
-        }
-        
-        .friend-updated {
-          font-size: 11px;
-          color: var(--text-muted);
-        }
-        
-        .friend-updated.stale {
-          color: var(--warning);
-        }
-        
-        .friend-message-btn {
+
+        .friend-card-actions {
           display: flex;
           align-items: center;
-          justify-content: center;
-          width: 36px;
-          height: 36px;
-          border-radius: var(--radius-full);
-          background: rgba(99, 102, 241, 0.1);
-          color: var(--primary);
-          text-decoration: none;
-          transition: all var(--transition-fast);
-          flex-shrink: 0;
-          margin-left: 8px;
+          justify-content: flex-end;
+          padding: 0.5rem 1rem;
+          border-top: 1px solid rgba(255,255,255,0.1);
+          background: rgba(0,0,0,0.2);
         }
-        
-        .friend-message-btn:hover {
-          background: rgba(99, 102, 241, 0.2);
-          transform: scale(1.1);
+
+        .hide-toggle {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          cursor: pointer;
         }
-        
-        .friend-message-btn .material-symbols-outlined {
-          font-size: 18px;
-        }
-        
-        .ghost-badge {
-          margin-left: 6px;
-          font-size: 14px;
-        }
-        
-        .friend-item.ghost {
-          opacity: 0.7;
-        }
-        
-        .friend-item.stale-item {
-          border-left: 3px solid var(--warning);
-        }
-        
-        .last-seen-label {
-          font-size: 11px;
+
+        .hide-toggle-label {
+          font-size: 0.75rem;
           color: var(--text-muted);
-          font-style: italic;
+          font-weight: 600;
+        }
+
+        .toggle-btn {
+          position: relative;
+          width: 2.5rem;
+          height: 1.375rem;
+          background: none;
+          border: none;
+          padding: 0;
+          cursor: pointer;
+        }
+
+        .toggle-track {
+          display: block;
+          width: 100%;
+          height: 100%;
+          background: rgba(255,255,255,0.2);
+          border-radius: 999px;
+          transition: background 0.2s ease;
+        }
+
+        .toggle-btn.active .toggle-track {
+          background: var(--accent-coral);
+        }
+
+        .toggle-thumb {
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 1rem;
+          height: 1rem;
+          background: white;
+          border-radius: 50%;
+          transition: transform 0.2s ease;
+        }
+
+        .toggle-btn.active .toggle-thumb {
+          transform: translateX(1.125rem);
         }
       `}</style>
     </div>

@@ -1,6 +1,12 @@
-import { useMemo } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
+import { BottomNav } from './BottomNav';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
-// Major cities database with coordinates
+// Mapbox access token - Get yours at https://www.mapbox.com/
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || '';
+
+// Major cities database with coordinates (fallback for missing location data)
 const MAJOR_CITIES = [
     { name: 'New York', lat: 40.7128, lng: -74.0060, color: '#FF7F6C' },
     { name: 'Los Angeles', lat: 34.0522, lng: -118.2437, color: '#A0E8AF' },
@@ -14,15 +20,46 @@ const MAJOR_CITIES = [
     { name: 'Boston', lat: 42.3601, lng: -71.0589, color: '#FFEB3B' },
 ];
 
-// Convert lat/lng to SVG coordinates
-function projectToSVG(lat, lng, width, height) {
-    // Simple equirectangular projection
-    const x = ((lng + 180) / 360) * width;
-    const y = ((90 - lat) / 180) * height;
-    return { x, y };
+// Convert hex color to RGB array
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [
+        parseInt(result[1], 16),
+        parseInt(result[2], 16),
+        parseInt(result[3], 16)
+    ] : [204, 255, 0];
 }
 
-export function MapView({ friends = [], userLocation, onSelectCity }) {
+// Calculate distance between two coordinates using Haversine formula
+function getDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Find nearest major city
+function getNearestCity(lat, lng) {
+    let nearest = MAJOR_CITIES[0];
+    let minDistance = Infinity;
+    MAJOR_CITIES.forEach(city => {
+        const dist = getDistance(lat, lng, city.lat, city.lng);
+        if (dist < minDistance) {
+            minDistance = dist;
+            nearest = city;
+        }
+    });
+    return { ...nearest, distance: Math.round(minDistance) };
+}
+
+export function MapView({ friends = [], userLocation, user, onSelectCity, onListView, onShowFriends, onSettings, onGoToUserCity, onInvite, onToggleGhostMode, onToggleNotifications, onUpdateLocation, onRequestLocation, ghostMode = false, notificationsMuted = false, centerOnUser = false, onCenterComplete }) {
+    const mapContainerRef = useRef(null);
+    const mapRef = useRef(null);
+    const mapLoadedRef = useRef(false);
+
     // Group friends by city
     const citiesData = useMemo(() => {
         const cityMap = new Map();
@@ -60,107 +97,647 @@ export function MapView({ friends = [], userLocation, onSelectCity }) {
         return Array.from(cityMap.values()).filter(c => c.lat && c.lng);
     }, [friends]);
 
-    const width = 800;
-    const height = 450;
+    // Create GeoJSON for cities
+    const citiesGeoJson = useMemo(() => ({
+        type: 'FeatureCollection',
+        features: citiesData.map(city => ({
+            type: 'Feature',
+            geometry: {
+                type: 'Point',
+                coordinates: [city.lng, city.lat]
+            },
+            properties: {
+                city: city.city,
+                country: city.country,
+                friendCount: city.friends.length,
+                color: city.color,
+                colorRgb: hexToRgb(city.color)
+            }
+        }))
+    }), [citiesData]);
+
+    // Create GeoJSON for user location
+    const userGeoJson = useMemo(() => {
+        if (!userLocation?.lat || !userLocation?.lng) return null;
+        return {
+            type: 'FeatureCollection',
+            features: [{
+                type: 'Feature',
+                geometry: {
+                    type: 'Point',
+                    coordinates: [userLocation.lng, userLocation.lat]
+                },
+                properties: {
+                    label: 'YOU'
+                }
+            }]
+        };
+    }, [userLocation]);
+
+    // Calculate user's estimated city
+    const userEstimatedCity = useMemo(() => {
+        if (!userLocation?.lat || !userLocation?.lng) return null;
+        const userLat = parseFloat(userLocation.lat);
+        const userLng = parseFloat(userLocation.lng);
+        if (isNaN(userLat) || isNaN(userLng)) return null;
+        const nearestMajor = getNearestCity(userLat, userLng);
+        if (nearestMajor.distance <= 30) {
+            return nearestMajor.name;
+        }
+        return userLocation.city || 'Your Location';
+    }, [userLocation]);
+
+    // Clear map reference when entering ghost mode so it reinitializes when exiting
+    useEffect(() => {
+        if (ghostMode && mapRef.current) {
+            mapRef.current.remove();
+            mapRef.current = null;
+            mapLoadedRef.current = false;
+        }
+    }, [ghostMode]);
+
+    // Initialize map
+    useEffect(() => {
+        if (ghostMode) return; // Don't init when in ghost mode
+        if (!mapContainerRef.current || mapRef.current) return;
+
+        // Check if we have an access token
+        if (!mapboxgl.accessToken) {
+            console.warn('Mapbox access token not found. Add VITE_MAPBOX_ACCESS_TOKEN to your .env file.');
+            return;
+        }
+
+        const map = new mapboxgl.Map({
+            container: mapContainerRef.current,
+            style: 'mapbox://styles/mapbox/dark-v11',
+            center: [0, 20],
+            zoom: 1.2,
+            minZoom: 0.5,
+            maxZoom: 6,
+            projection: 'globe',
+            attributionControl: false,
+        });
+
+        mapRef.current = map;
+
+        // Add navigation controls
+        map.addControl(
+            new mapboxgl.NavigationControl({ showCompass: false }),
+            'bottom-right'
+        );
+
+        // Add atmosphere and globe effects
+        map.on('load', () => {
+            mapLoadedRef.current = true;
+
+            map.setFog({
+                color: 'rgb(10, 10, 10)',
+                'high-color': 'rgb(20, 20, 30)',
+                'horizon-blend': 0.1,
+                'space-color': 'rgb(5, 5, 5)',
+                'star-intensity': 0.15
+            });
+
+            // Hide country borders, admin boundaries, and unwanted labels
+            const layersToHide = [
+                // Country and admin boundaries
+                'admin-0-boundary',
+                'admin-0-boundary-bg',
+                'admin-0-boundary-disputed',
+                'admin-1-boundary',
+                'admin-1-boundary-bg',
+                // Country and continent labels
+                'country-label',
+                'continent-label',
+                // State/region labels
+                'state-label',
+                // Water labels (oceans, seas)
+                'water-point-label',
+                'water-line-label',
+                'waterway-label',
+                // Natural feature labels
+                'natural-point-label',
+                'natural-line-label',
+                // POI labels we don't need
+                'poi-label'
+            ];
+
+            layersToHide.forEach(layerId => {
+                if (map.getLayer(layerId)) {
+                    map.setLayoutProperty(layerId, 'visibility', 'none');
+                }
+            });
+
+            // Configure city labels to only show at appropriate zoom levels
+            if (map.getLayer('settlement-major-label')) {
+                map.setLayoutProperty('settlement-major-label', 'visibility', 'visible');
+                map.setLayerZoomRange('settlement-major-label', 3, 22);
+            }
+            if (map.getLayer('settlement-minor-label')) {
+                map.setLayoutProperty('settlement-minor-label', 'visibility', 'visible');
+                map.setLayerZoomRange('settlement-minor-label', 5, 22);
+            }
+            if (map.getLayer('settlement-subdivision-label')) {
+                map.setLayoutProperty('settlement-subdivision-label', 'visibility', 'none');
+            }
+
+            // Add cities source
+            map.addSource('cities', {
+                type: 'geojson',
+                data: citiesGeoJson
+            });
+
+            // Add city circles layer
+            map.addLayer({
+                id: 'city-circles',
+                type: 'circle',
+                source: 'cities',
+                paint: {
+                    'circle-radius': [
+                        'interpolate', ['linear'], ['get', 'friendCount'],
+                        1, 18,
+                        5, 28,
+                        10, 38
+                    ],
+                    'circle-color': ['get', 'color'],
+                    'circle-stroke-color': '#000000',
+                    'circle-stroke-width': 3,
+                    'circle-opacity': 0.95
+                }
+            });
+
+            // Add friend count labels
+            map.addLayer({
+                id: 'city-count-labels',
+                type: 'symbol',
+                source: 'cities',
+                layout: {
+                    'text-field': ['to-string', ['get', 'friendCount']],
+                    'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+                    'text-size': 14,
+                    'text-allow-overlap': true
+                },
+                paint: {
+                    'text-color': '#000000'
+                }
+            });
+
+            // Add city name labels
+            map.addLayer({
+                id: 'city-name-labels',
+                type: 'symbol',
+                source: 'cities',
+                layout: {
+                    'text-field': ['upcase', ['get', 'city']],
+                    'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+                    'text-size': 11,
+                    'text-offset': [0, 2.5],
+                    'text-anchor': 'top',
+                    'text-allow-overlap': false,
+                    'text-letter-spacing': 0.05
+                },
+                paint: {
+                    'text-color': '#ffffff',
+                    'text-halo-color': 'rgba(0, 0, 0, 0.8)',
+                    'text-halo-width': 1
+                }
+            });
+
+            // Add user location source if available
+            if (userGeoJson) {
+                map.addSource('user-location', {
+                    type: 'geojson',
+                    data: userGeoJson
+                });
+
+                // User location outer glow
+                map.addLayer({
+                    id: 'user-glow',
+                    type: 'circle',
+                    source: 'user-location',
+                    paint: {
+                        'circle-radius': 22,
+                        'circle-color': '#CCFF00',
+                        'circle-opacity': 0.3,
+                        'circle-blur': 0.5
+                    }
+                });
+
+                // User location circle
+                map.addLayer({
+                    id: 'user-circle',
+                    type: 'circle',
+                    source: 'user-location',
+                    paint: {
+                        'circle-radius': 15,
+                        'circle-color': '#CCFF00',
+                        'circle-stroke-color': '#000000',
+                        'circle-stroke-width': 2
+                    }
+                });
+
+                // User location label
+                map.addLayer({
+                    id: 'user-label',
+                    type: 'symbol',
+                    source: 'user-location',
+                    layout: {
+                        'text-field': 'YOU',
+                        'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+                        'text-size': 10,
+                        'text-allow-overlap': true
+                    },
+                    paint: {
+                        'text-color': '#000000'
+                    }
+                });
+            }
+
+            // Handle city click
+            map.on('click', 'city-circles', (e) => {
+                if (e.features && e.features[0]) {
+                    const props = e.features[0].properties;
+                    const cityData = citiesData.find(c => c.city === props.city);
+                    if (cityData) {
+                        onSelectCity?.(cityData);
+                    }
+                }
+            });
+
+            // Change cursor on hover
+            map.on('mouseenter', 'city-circles', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+            map.on('mouseleave', 'city-circles', () => {
+                map.getCanvas().style.cursor = '';
+            });
+        });
+
+        return () => {
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+                mapLoadedRef.current = false;
+            }
+        };
+    }, []);
+
+    // Update cities data when it changes
+    useEffect(() => {
+        if (!mapRef.current || !mapLoadedRef.current) return;
+
+        const source = mapRef.current.getSource('cities');
+        if (source) {
+            source.setData(citiesGeoJson);
+        }
+    }, [citiesGeoJson]);
+
+    // Update user location when it changes
+    useEffect(() => {
+        if (!mapRef.current || !mapLoadedRef.current || !userGeoJson) return;
+
+        const source = mapRef.current.getSource('user-location');
+        if (source) {
+            source.setData(userGeoJson);
+        } else if (mapRef.current.isStyleLoaded()) {
+            // Add user location if it wasn't available on initial load
+            mapRef.current.addSource('user-location', {
+                type: 'geojson',
+                data: userGeoJson
+            });
+
+            mapRef.current.addLayer({
+                id: 'user-glow',
+                type: 'circle',
+                source: 'user-location',
+                paint: {
+                    'circle-radius': 22,
+                    'circle-color': '#CCFF00',
+                    'circle-opacity': 0.3,
+                    'circle-blur': 0.5
+                }
+            });
+
+            mapRef.current.addLayer({
+                id: 'user-circle',
+                type: 'circle',
+                source: 'user-location',
+                paint: {
+                    'circle-radius': 15,
+                    'circle-color': '#CCFF00',
+                    'circle-stroke-color': '#000000',
+                    'circle-stroke-width': 2
+                }
+            });
+
+            mapRef.current.addLayer({
+                id: 'user-label',
+                type: 'symbol',
+                source: 'user-location',
+                layout: {
+                    'text-field': 'YOU',
+                    'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
+                    'text-size': 10,
+                    'text-allow-overlap': true
+                },
+                paint: {
+                    'text-color': '#000000'
+                }
+            });
+        }
+    }, [userGeoJson]);
+
+    // Center on user location when centerOnUser prop changes to true
+    useEffect(() => {
+        if (centerOnUser && mapRef.current && mapLoadedRef.current && userLocation?.lat && userLocation?.lng) {
+            mapRef.current.flyTo({
+                center: [parseFloat(userLocation.lng), parseFloat(userLocation.lat)],
+                zoom: 5,
+                duration: 1500,
+                essential: true
+            });
+            // Call onCenterComplete after animation
+            setTimeout(() => {
+                onCenterComplete?.();
+            }, 1500);
+        }
+    }, [centerOnUser, userLocation, onCenterComplete]);
+
+    // Fallback UI when no token is available
+    const noTokenFallback = !mapboxgl.accessToken && (
+        <div style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--surface-dark)',
+            color: 'var(--text-secondary)',
+            padding: '2rem',
+            textAlign: 'center'
+        }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '3rem', marginBottom: '1rem', color: 'var(--accent-lime)' }}>
+                map
+            </span>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.5rem', color: 'white' }}>
+                Mapbox Token Required
+            </h3>
+            <p style={{ fontSize: '0.875rem', maxWidth: '20rem', lineHeight: 1.6 }}>
+                Add <code style={{ background: 'var(--surface-border)', padding: '0.125rem 0.375rem', borderRadius: '4px' }}>VITE_MAPBOX_ACCESS_TOKEN</code> to your .env file to enable the map view.
+            </p>
+        </div>
+    );
 
     return (
         <div className="map-view-container">
-            <h2 className="map-title">Map View</h2>
+            {/* Header - matches CityList */}
+            <header className="header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem', position: 'relative' }}>
+                {/* Top row: Avatar + Title + Notification Bell */}
+                <div className="flex items-center gap-3">
+                    {/* User Avatar - clickable to settings */}
+                    <div
+                        className="user-avatar-header"
+                        onClick={onSettings}
+                        style={{
+                            width: '2.75rem',
+                            height: '2.75rem',
+                            borderRadius: '50%',
+                            border: '2px solid var(--accent-lime)',
+                            overflow: 'hidden',
+                            background: 'var(--surface-dark)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s, box-shadow 0.2s',
+                            flexShrink: 0
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    >
+                        {user?.avatar_url ? (
+                            <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                            <span className="material-symbols-outlined" style={{ color: 'var(--accent-lime)', fontSize: '1.5rem' }}>person</span>
+                        )}
+                    </div>
+                    <h1 style={{
+                        fontSize: '1.5rem',
+                        fontWeight: 900,
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase',
+                        fontStyle: 'italic',
+                        transform: 'skewX(-6deg)',
+                        color: 'white',
+                        whiteSpace: 'nowrap',
+                        flex: 1
+                    }}>Where In World</h1>
 
-            <div className="map-svg-container">
-                <svg
-                    viewBox={`0 0 ${width} ${height}`}
-                    className="world-map-svg"
-                >
-                    {/* World background */}
-                    <rect width={width} height={height} fill="var(--background-dark)" />
+                    {/* Notification Bell - Top Right */}
+                    <button
+                        onClick={onToggleNotifications}
+                        style={{
+                            width: '2.5rem',
+                            height: '2.5rem',
+                            borderRadius: '50%',
+                            background: 'transparent',
+                            border: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s'
+                        }}
+                        title={notificationsMuted ? 'Unmute Notifications' : 'Mute Notifications'}
+                    >
+                        <span className="material-symbols-outlined filled" style={{
+                            fontSize: '1.5rem',
+                            color: '#ef4444'
+                        }}>
+                            {notificationsMuted ? 'notifications_off' : 'notifications'}
+                        </span>
+                    </button>
+                </div>
 
-                    {/* Simple world outline */}
-                    <g className="world-outline" stroke="rgba(255,255,255,0.15)" fill="none" strokeWidth="1">
-                        {/* Continents rough outlines */}
-                        {/* North America */}
-                        <path d="M50,80 Q100,60 180,70 Q200,90 220,150 Q180,200 120,210 Q80,180 50,120 Z" />
-                        {/* South America */}
-                        <path d="M150,230 Q170,240 180,280 Q190,340 170,380 Q140,390 130,350 Q110,290 150,230 Z" />
-                        {/* Europe */}
-                        <path d="M380,80 Q420,70 460,80 Q480,100 450,130 Q400,140 380,110 Z" />
-                        {/* Africa */}
-                        <path d="M400,170 Q450,160 480,180 Q510,240 490,320 Q430,350 390,300 Q380,230 400,170 Z" />
-                        {/* Asia */}
-                        <path d="M500,60 Q600,50 700,80 Q750,120 750,180 Q700,200 600,200 Q520,180 480,130 Q490,80 500,60 Z" />
-                        {/* Australia */}
-                        <path d="M650,280 Q720,260 760,290 Q780,340 740,370 Q680,380 650,340 Q640,310 650,280 Z" />
-                    </g>
+                {/* Bottom row: Centered Add Friend button */}
+                <div className="flex items-center justify-center">
+                    {onInvite && (
+                        <button
+                            className="btn-hard"
+                            style={{
+                                height: '2.5rem',
+                                padding: '0 3rem',
+                                minWidth: '12rem',
+                                background: 'var(--accent-lime)',
+                                color: 'black',
+                                fontSize: '0.8125rem',
+                                fontWeight: 800,
+                                textTransform: 'uppercase',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                borderRadius: '2rem',
+                                border: '2px solid black',
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s, box-shadow 0.2s'
+                            }}
+                            onClick={onInvite}
+                            title="Invite Friends"
+                        >
+                            <span className="material-symbols-outlined" style={{ fontSize: '1.125rem' }}>person_add</span>
+                            Add Friends
+                        </button>
+                    )}
+                </div>
+            </header>
 
-                    {/* Grid lines */}
-                    <g stroke="rgba(255,255,255,0.08)" strokeWidth="0.5">
-                        {[...Array(7)].map((_, i) => (
-                            <line key={`h${i}`} x1="0" y1={i * (height / 6)} x2={width} y2={i * (height / 6)} />
-                        ))}
-                        {[...Array(13)].map((_, i) => (
-                            <line key={`v${i}`} x1={i * (width / 12)} y1="0" x2={i * (width / 12)} y2={height} />
-                        ))}
-                    </g>
+            {/* Location & Ghost Mode Combined Card */}
+            <section className="px-6 mb-6">
+                <div className="card-hard" style={{ overflow: 'hidden' }}>
+                    {/* Location Banner - Top Section */}
+                    <div
+                        className="flex items-center justify-between p-4"
+                        style={{
+                            background: ghostMode ? '#1a1a2e' : (!userLocation && !ghostMode ? 'var(--accent-lime)' : 'white'),
+                            cursor: ghostMode ? 'default' : 'pointer'
+                        }}
+                        onClick={ghostMode ? undefined : (userLocation ? onUpdateLocation : onRequestLocation)}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div style={{
+                                width: '2.5rem',
+                                height: '2.5rem',
+                                background: ghostMode ? 'transparent' : 'black',
+                                color: ghostMode ? 'white' : 'var(--accent-lime)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: ghostMode ? 'none' : '2px solid black'
+                            }}>
+                                {ghostMode ? (
+                                    <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M50 10C30 10 20 30 20 50C20 70 25 90 30 90C35 90 35 80 40 80C45 80 45 90 50 90C55 90 55 80 60 80C65 80 65 90 70 90C75 90 80 70 80 50C80 30 70 10 50 10Z" stroke="white" strokeWidth="3" fill="none" />
+                                        <circle cx="38" cy="45" r="5" fill="white" />
+                                        <circle cx="62" cy="45" r="5" fill="white" />
+                                        <ellipse cx="50" cy="60" rx="6" ry="8" fill="white" />
+                                    </svg>
+                                ) : !userLocation ? (
+                                    <span className="material-symbols-outlined filled">location_off</span>
+                                ) : (
+                                    <span className="material-symbols-outlined filled">my_location</span>
+                                )}
+                            </div>
+                            <div className="flex flex-col">
+                                {!userLocation && !ghostMode ? (
+                                    <>
+                                        <span style={{ fontSize: '0.625rem', fontWeight: 900, color: 'black', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Tap to</span>
+                                        <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'black', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 }}>Enable Location</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span style={{ fontSize: '0.625rem', fontWeight: 900, color: ghostMode ? 'rgba(255,255,255,0.6)' : 'black', textTransform: 'uppercase', letterSpacing: '0.1em' }}>You are in</span>
+                                        <span style={{ fontSize: '1.25rem', fontWeight: 900, color: ghostMode ? 'white' : 'black', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                                            {ghostMode ? 'The Bermuda Triangle' : (userEstimatedCity || userLocation?.city || 'Unknown')}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        {!ghostMode && (
+                            <span className="material-symbols-outlined" style={{ color: 'black' }}>
+                                {userLocation ? 'refresh' : 'chevron_right'}
+                            </span>
+                        )}
+                    </div>
 
-                    {/* User location marker */}
-                    {userLocation?.lat && userLocation?.lng && (() => {
-                        const pos = projectToSVG(userLocation.lat, userLocation.lng, width, height);
-                        return (
-                            <g transform={`translate(${pos.x}, ${pos.y})`}>
-                                <circle r="15" fill="#CCFF00" stroke="black" strokeWidth="2" className="pulse-marker" />
-                                <text textAnchor="middle" y="5" fill="black" fontSize="10" fontWeight="bold">YOU</text>
-                            </g>
-                        );
-                    })()}
+                    {/* Ghost Mode Toggle - Bottom Section */}
+                    <div className="flex items-center justify-between p-4" style={{ borderTop: '2px solid black', background: ghostMode ? '#0d0d1a' : 'var(--graphic-paper)' }}>
+                        <div className="flex items-center gap-2">
+                            <span className="material-symbols-outlined" style={{ color: ghostMode ? 'var(--accent-lime)' : 'black' }}>visibility_off</span>
+                            <span style={{ fontSize: '1.125rem', fontWeight: 800, color: ghostMode ? 'var(--accent-lime)' : 'black', textTransform: 'uppercase' }}>Ghost Mode</span>
+                        </div>
+                        <label
+                            style={{ position: 'relative', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                            onClick={(e) => { e.preventDefault(); onToggleGhostMode?.(); }}
+                        >
+                            <div style={{
+                                width: '4rem',
+                                height: '2rem',
+                                background: ghostMode ? 'var(--accent-lime)' : 'white',
+                                border: '2px solid black',
+                                position: 'relative',
+                                transition: 'background 0.2s'
+                            }}>
+                                <div style={{
+                                    position: 'absolute',
+                                    left: ghostMode ? '2.25rem' : '0.25rem',
+                                    top: '0.25rem',
+                                    width: '1.25rem',
+                                    height: '1.25rem',
+                                    background: 'black',
+                                    transition: 'left 0.2s'
+                                }}></div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </section>
 
-                    {/* City markers with friend counts */}
-                    {citiesData.map((city, idx) => {
-                        const pos = projectToSVG(city.lat, city.lng, width, height);
-                        const friendCount = city.friends.length;
-                        const size = Math.min(35, 14 + friendCount * 5);
 
-                        return (
-                            <g
-                                key={city.city}
-                                transform={`translate(${pos.x}, ${pos.y})`}
-                                className="city-marker"
-                                onClick={() => onSelectCity?.(city)}
-                                style={{ cursor: 'pointer' }}
-                            >
-                                <circle
-                                    r={size}
-                                    fill={city.color}
-                                    stroke="black"
-                                    strokeWidth="3"
-                                    opacity="0.95"
-                                />
-                                <text
-                                    textAnchor="middle"
-                                    y="5"
-                                    fill="black"
-                                    fontSize="14"
-                                    fontWeight="900"
-                                >
-                                    {friendCount}
-                                </text>
-                                <text
-                                    textAnchor="middle"
-                                    y={size + 16}
-                                    fill="white"
-                                    fontSize="11"
-                                    fontWeight="800"
-                                    style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                                >
-                                    {city.city}
-                                </text>
-                            </g>
-                        );
-                    })}
-                </svg>
-            </div>
+
+            {/* Map Container or Ghost Mode Display */}
+            {ghostMode ? (
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1,
+                    minHeight: '60vh',
+                    padding: '3rem 1rem'
+                }}>
+                    <div className="ghost-float-icon">
+                        <svg width="180" height="180" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.9 }}>
+                            <path d="M50 10C30 10 20 30 20 50C20 70 25 90 30 90C35 90 35 80 40 80C45 80 45 90 50 90C55 90 55 80 60 80C65 80 65 90 70 90C75 90 80 70 80 50C80 30 70 10 50 10Z" stroke="rgba(204,255,0,0.8)" strokeWidth="2.5" fill="rgba(204,255,0,0.1)" />
+                            <circle cx="38" cy="45" r="5" fill="rgba(204,255,0,0.9)" />
+                            <circle cx="62" cy="45" r="5" fill="rgba(204,255,0,0.9)" />
+                            <ellipse cx="50" cy="60" rx="6" ry="8" fill="rgba(204,255,0,0.9)" />
+                        </svg>
+                    </div>
+                    <p style={{
+                        marginTop: '1.5rem',
+                        fontSize: '0.9rem',
+                        fontStyle: 'italic',
+                        color: 'rgba(255,255,255,0.5)',
+                        textAlign: 'center',
+                        maxWidth: '280px',
+                        lineHeight: 1.6
+                    }}>
+                        "The seer and the visible reciprocate one another"
+                    </p>
+                </div>
+            ) : (
+                <div className="map-container-wrapper">
+                    <div ref={mapContainerRef} className="mapbox-container" />
+                    {noTokenFallback}
+                </div>
+            )}
+
+            {/* Floating Bottom Navigation */}
+            <BottomNav
+                activeTab="map"
+                onTabChange={(tab) => {
+                    if (tab === 'cities') onListView?.();
+                    if (tab === 'friends') onShowFriends?.();
+                    if (tab === 'you') onSettings?.();
+                }}
+                onLocationPress={onGoToUserCity}
+            />
 
             <style>{`
                 .map-view-container {
+                    position: relative;
                     display: flex;
                     flex-direction: column;
                     min-height: 100vh;
@@ -168,55 +745,46 @@ export function MapView({ friends = [], userLocation, onSelectCity }) {
                     max-width: 28rem;
                     margin: 0 auto;
                     background: var(--background-dark);
-                    padding: 1rem;
-                    padding-bottom: 6rem;
+                    overflow-x: hidden;
+                    padding-bottom: 5rem;
                 }
                 
-                .map-title {
-                    font-size: 1.25rem;
-                    font-weight: 900;
-                    text-transform: uppercase;
-                    letter-spacing: 0.05em;
-                    font-style: italic;
-                    transform: skewX(-6deg);
-                    color: white;
-                    margin-bottom: 1rem;
-                    padding: 0 0.5rem;
-                }
-                
-                .map-svg-container {
+                .map-container-wrapper {
+                    position: relative;
                     flex: 1;
                     width: 100%;
                     min-height: 60vh;
                     border: 3px solid black;
-                    background: var(--surface-dark);
-                    overflow: auto;
-                    touch-action: pan-x pan-y pinch-zoom;
-                    -webkit-overflow-scrolling: touch;
+                    overflow: hidden;
+                    border-radius: 8px;
                 }
                 
-                .world-map-svg {
+                .mapbox-container {
+                    position: absolute;
+                    inset: 0;
                     width: 100%;
                     height: 100%;
-                    min-width: 600px;
-                    min-height: 400px;
                 }
                 
-                .city-marker {
-                    transition: transform 0.2s ease;
+                .mapboxgl-ctrl-group {
+                    background: white !important;
+                    border: 2px solid black !important;
+                    border-radius: 0 !important;
+                    box-shadow: 2px 2px 0px 0px rgba(0, 0, 0, 1) !important;
                 }
                 
-                .city-marker:hover {
-                    transform: scale(1.15);
+                .mapboxgl-ctrl-group button {
+                    width: 36px !important;
+                    height: 36px !important;
                 }
-                
-                .pulse-marker {
-                    animation: pulse 2s ease-in-out infinite;
+
+                .ghost-float-icon {
+                    animation: ghostFloat 3s ease-in-out infinite;
                 }
-                
-                @keyframes pulse {
-                    0%, 100% { opacity: 1; transform: scale(1); }
-                    50% { opacity: 0.8; transform: scale(1.1); }
+
+                @keyframes ghostFloat {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-15px); }
                 }
             `}</style>
         </div>

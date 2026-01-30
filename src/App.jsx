@@ -6,8 +6,12 @@ import { Auth } from './components/Auth';
 import { ContactSync } from './components/ContactSync';
 import { InviteFriends } from './components/InviteFriends';
 import { Settings } from './components/Settings';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { Terms } from './components/Terms';
 import { MapView } from './components/MapView';
+import { LocationPermissionModal } from './components/LocationPermissionModal';
 import { ArrivalNotification } from './components/ArrivalNotification';
+import { FriendJoinedNotification, useNewFriendNotifications } from './components/FriendJoinedNotification';
 import { EngagementBanners } from './components/EngagementBanners';
 import { updateStreak } from './lib/streak';
 import { useLocation } from './hooks/useLocation';
@@ -19,20 +23,37 @@ function App() {
   const [user, setUser] = useState(null);
   const [friends, setFriends] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('grid'); // 'grid', 'map', 'chat', 'profile'
+  const [activeTab, setActiveTab] = useState('grid'); // 'grid', 'map', 'friends', 'chat', 'profile'
   const [selectedCity, setSelectedCity] = useState(null);
   const [showContactSync, setShowContactSync] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [ghostMode, setGhostMode] = useState(false);
   const [notificationsMuted, setNotificationsMuted] = useState(false);
   const [arrivals, setArrivals] = useState([]); // Track friend arrivals for notifications
   const [refreshing, setRefreshing] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [shouldCenterOnUser, setShouldCenterOnUser] = useState(false);
 
   // Track previous friend locations to detect changes
   const prevFriendLocations = useRef({});
 
-  const { location, requestLocation, permission, loading: locationLoading } = useLocation();
+  const { location, requestLocation, permission, error: locationError, loading: locationLoading } = useLocation();
+
+  // Track new friends joining via invite links
+  const { newFriends, dismissNotification: dismissNewFriend } = useNewFriendNotifications(friends, user && !loading);
+
+  // Show location modal when needed
+  useEffect(() => {
+    // Show modal if permission is denied or there's an error
+    if (user && !loading) {
+      if (permission === 'denied' || (locationError && !location)) {
+        setShowLocationModal(true);
+      }
+    }
+  }, [user, loading, permission, locationError, location]);
 
   // Load friends data and detect arrivals
   const loadFriends = useCallback(async () => {
@@ -291,6 +312,38 @@ function App() {
           setShowSettings(false);
         }}
         onUserUpdate={(updatedUser) => setUser(updatedUser)}
+        onShowPrivacyPolicy={() => {
+          setShowSettings(false);
+          setShowPrivacyPolicy(true);
+        }}
+        onShowTerms={() => {
+          setShowSettings(false);
+          setShowTerms(true);
+        }}
+      />
+    );
+  }
+
+  // Privacy Policy view
+  if (showPrivacyPolicy) {
+    return (
+      <PrivacyPolicy
+        onBack={() => {
+          setShowPrivacyPolicy(false);
+          setShowSettings(true);
+        }}
+      />
+    );
+  }
+
+  // Terms view
+  if (showTerms) {
+    return (
+      <Terms
+        onBack={() => {
+          setShowTerms(false);
+          setShowSettings(true);
+        }}
       />
     );
   }
@@ -352,7 +405,13 @@ function App() {
             onToggleGhostMode={() => setGhostMode(!ghostMode)}
             onToggleNotifications={() => setNotificationsMuted(!notificationsMuted)}
             onUpdateLocation={handleUpdateLocation}
+            onRequestLocation={() => setShowLocationModal(true)}
             onMapView={() => setActiveTab('map')}
+            onShowFriends={() => setActiveTab('friends')}
+            onGoToUserLocation={() => {
+              setShouldCenterOnUser(true);
+              setActiveTab('map');
+            }}
           />
         )}
 
@@ -360,7 +419,41 @@ function App() {
           <MapView
             friends={ghostMode ? [] : friends}
             userLocation={location}
+            user={user}
+            ghostMode={ghostMode}
+            notificationsMuted={notificationsMuted}
+            centerOnUser={shouldCenterOnUser}
+            onCenterComplete={() => setShouldCenterOnUser(false)}
             onSelectCity={setSelectedCity}
+            onListView={() => setActiveTab('grid')}
+            onSettings={() => setShowSettings(true)}
+            onGoToUserCity={() => {
+              setShouldCenterOnUser(true);
+            }}
+            onShowFriends={() => setActiveTab('friends')}
+            onInvite={() => setShowInvite(true)}
+            onToggleGhostMode={() => setGhostMode(!ghostMode)}
+            onToggleNotifications={() => setNotificationsMuted(!notificationsMuted)}
+            onUpdateLocation={handleUpdateLocation}
+            onRequestLocation={() => setShowLocationModal(true)}
+          />
+        )}
+
+        {activeTab === 'friends' && (
+          <FriendsList
+            friends={friends}
+            userLocation={location}
+            onSelectFriend={(friend) => console.log('Selected:', friend)}
+            onBack={() => setActiveTab('grid')}
+            onSettings={() => setShowSettings(true)}
+            onShowCities={() => setActiveTab('grid')}
+            onShowMap={() => setActiveTab('map')}
+            ghostMode={ghostMode}
+            onInvite={() => setShowInvite(true)}
+            onGoToUserLocation={() => {
+              setShouldCenterOnUser(true);
+              setActiveTab('map');
+            }}
           />
         )}
 
@@ -384,6 +477,29 @@ function App() {
           onDismiss={() => setArrivals(prev => prev.slice(1))}
         />
       )}
+
+      {/* New Friend Notification (from invite links) */}
+      {newFriends.length > 0 && arrivals.length === 0 && !notificationsMuted && (
+        <FriendJoinedNotification
+          friend={newFriends[0]}
+          onDismiss={() => dismissNewFriend(newFriends[0]?.id)}
+        />
+      )}
+
+      {/* Location Permission Modal */}
+      <LocationPermissionModal
+        isOpen={showLocationModal}
+        onClose={() => setShowLocationModal(false)}
+        onRequestLocation={async () => {
+          const loc = await requestLocation();
+          if (loc) {
+            setShowLocationModal(false);
+          }
+        }}
+        permissionState={permission}
+        error={locationError}
+        loading={locationLoading}
+      />
 
       <style>{`
         .app {
@@ -443,6 +559,28 @@ function App() {
           z-index: 1000;
         }
         
+        .modal-content {
+          background: var(--surface-dark);
+          border: 3px solid black;
+          border-radius: 12px;
+          position: relative;
+        }
+        
+        .modal-close {
+          position: absolute;
+          top: 1rem;
+          right: 1rem;
+          background: transparent;
+          border: none;
+          color: rgba(255, 255, 255, 0.5);
+          cursor: pointer;
+          padding: 0.25rem;
+        }
+        
+        .modal-close:hover {
+          color: white;
+        }
+        
         .modal {
           width: 100%;
           max-width: 26rem;
@@ -450,7 +588,7 @@ function App() {
           overflow-y: auto;
         }
       `}</style>
-    </div>
+    </div >
   );
 }
 

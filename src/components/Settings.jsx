@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/supabase';
 
-export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, onLogout, onUserUpdate }) {
+export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, onLogout, onUserUpdate, onShowPrivacyPolicy, onShowTerms }) {
     const [isGhostMode, setIsGhostMode] = useState(ghostMode);
     const [activeTab, setActiveTab] = useState('profile'); // 'profile' or 'privacy'
     const [editingName, setEditingName] = useState(false);
@@ -92,7 +92,7 @@ export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, o
                     className={`settings-tab ${activeTab === 'privacy' ? 'active' : ''}`}
                     onClick={() => setActiveTab('privacy')}
                 >
-                    Privacy
+                    About
                 </button>
             </div>
 
@@ -215,32 +215,37 @@ export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, o
 
                 {activeTab === 'privacy' && (
                     <>
-                        {/* Ghost Mode Card */}
-                        <section className="ghost-mode-card">
-                            <div className="ghost-mode-card-bg">
-                                <svg className="ghost-wave ghost-wave-1" preserveAspectRatio="none" viewBox="0 0 1440 320">
-                                    <path d="M0,224L48,213.3C96,203,192,181,288,181.3C384,181,480,203,576,224C672,245,768,267,864,250.7C960,235,1056,181,1152,165.3C1248,149,1344,171,1392,181.3L1440,192V320H0Z" fill="var(--primary)" fillOpacity="0.3" />
-                                </svg>
+                        {/* About Section */}
+                        <section className="settings-card">
+                            <div className="settings-card-header">
+                                <span className="material-symbols-outlined settings-card-icon mint">info</span>
+                                <h3 className="settings-card-title">About</h3>
                             </div>
-                            <div className="ghost-mode-card-content">
-                                <div className="flex flex-col items-center gap-2">
-                                    <div className="ghost-mode-icon">
-                                        <span className="material-symbols-outlined">visibility_off</span>
+
+                            <div className="legal-links">
+                                <button
+                                    onClick={onShowPrivacyPolicy}
+                                    className="legal-link"
+                                >
+                                    <span className="material-symbols-outlined">shield</span>
+                                    <div className="legal-link-content">
+                                        <span className="legal-link-title">Privacy Policy</span>
+                                        <span className="legal-link-subtitle">How we handle your data</span>
                                     </div>
-                                    <h3 className="ghost-mode-title">Ghost<br />Mode</h3>
-                                    <p className="ghost-mode-subtitle">Become Invisible</p>
-                                </div>
-                                <div className={`toggle-big ${isGhostMode ? 'active' : ''}`} onClick={handleGhostModeToggle}>
-                                    <span className="toggle-big-label on">ON</span>
-                                    <span className="toggle-big-label off">OFF</span>
-                                    <div className="toggle-big-knob">
-                                        <span className="material-symbols-outlined" style={{ color: 'black' }}>power_settings_new</span>
+                                    <span className="material-symbols-outlined legal-link-arrow">arrow_forward</span>
+                                </button>
+
+                                <button
+                                    onClick={onShowTerms}
+                                    className="legal-link"
+                                >
+                                    <span className="material-symbols-outlined">description</span>
+                                    <div className="legal-link-content">
+                                        <span className="legal-link-title">Terms & Conditions</span>
+                                        <span className="legal-link-subtitle">Rules for using the app</span>
                                     </div>
-                                </div>
-                                <div className="ghost-mode-info">
-                                    <span className="material-symbols-outlined" style={{ flexShrink: 0 }}>info</span>
-                                    <p>Going ghost hides you, but also blinds you. You won't see friends' locations while active.</p>
-                                </div>
+                                    <span className="material-symbols-outlined legal-link-arrow">arrow_forward</span>
+                                </button>
                             </div>
                         </section>
                     </>
@@ -591,6 +596,58 @@ export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, o
                 @keyframes wave {
                     0% { transform: translateX(0); }
                     100% { transform: translateX(-50%); }
+                }
+
+                /* Legal Links */
+                .legal-links {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                    padding: 1rem;
+                }
+
+                .legal-link {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    padding: 1rem;
+                    background: var(--surface-dark);
+                    border-radius: 0.75rem;
+                    text-decoration: none;
+                    color: white;
+                    transition: all 0.2s;
+                    border: 2px solid transparent;
+                }
+
+                .legal-link:hover {
+                    border-color: var(--accent-lime);
+                }
+
+                .legal-link > .material-symbols-outlined:first-child {
+                    font-size: 1.5rem;
+                    color: var(--accent-lime);
+                }
+
+                .legal-link-content {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.25rem;
+                }
+
+                .legal-link-title {
+                    font-weight: 700;
+                    font-size: 0.9rem;
+                }
+
+                .legal-link-subtitle {
+                    font-size: 0.75rem;
+                    color: var(--text-secondary);
+                }
+
+                .legal-link-arrow {
+                    color: var(--text-secondary);
+                    font-size: 1.25rem;
                 }
             `}</style>
         </div>

@@ -53,7 +53,7 @@ function getCityImage(cityName) {
 function timeAgo(dateString) {
     if (!dateString) return 'Never';
     const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
-    if (seconds < 60) return 'Active now';
+    if (seconds < 60) return 'Now';
     if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
     if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
@@ -156,7 +156,7 @@ export function CityDetail({ city, onBack }) {
                     {friends.map((friend, index) => {
                         const avatarColor = AVATAR_COLORS[index % AVATAR_COLORS.length];
                         const active = isActive(friend.updatedAt || friend.location?.updatedAt);
-                        const locationName = friend.location?.neighborhood || friend.location?.city || 'Unknown';
+                        const locationName = friend.location?.neighborhood || friend.originalCity || cityName;
 
                         return (
                             <div
@@ -180,7 +180,7 @@ export function CityDetail({ city, onBack }) {
                                         {friend.displayName || friend.display_name || 'Unknown'}
                                     </p>
                                     <p className="friend-item-location">
-                                        {locationName} • {timeAgo(friend.updatedAt || friend.location?.updatedAt)}
+                                        📍 {locationName} • {timeAgo(friend.updatedAt || friend.location?.updatedAt)}
                                     </p>
                                 </div>
 

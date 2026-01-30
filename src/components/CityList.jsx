@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
+import { BottomNav } from './BottomNav';
 
 // City images - curated high quality images for popular cities, with dynamic fallback
 const CITY_IMAGES = {
@@ -32,6 +33,27 @@ const CITY_IMAGES = {
     'san diego': 'https://images.unsplash.com/photo-1538689621163-f60939e00d32?w=800&q=80',
     'las vegas': 'https://images.unsplash.com/photo-1605833556294-ea5c7a74f57d?w=800&q=80',
     'phoenix': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
+    // International travel destinations
+    'bangkok': 'https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=800&q=80',
+    'kuala lumpur': 'https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=800&q=80',
+    'istanbul': 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=800&q=80',
+    'antalya': 'https://images.unsplash.com/photo-1593238739364-18cfde865577?w=800&q=80',
+    'seoul': 'https://images.unsplash.com/photo-1538485399081-7191377e8241?w=800&q=80',
+    'osaka': 'https://images.unsplash.com/photo-1590559899731-a382839e5549?w=800&q=80',
+    'mecca': 'https://images.unsplash.com/photo-1591604129939-f1efa4d9f7fa?w=800&q=80',
+    'phuket': 'https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?w=800&q=80',
+    'pattaya': 'https://images.unsplash.com/photo-1565967511849-76a60a516170?w=800&q=80',
+    'milan': 'https://images.unsplash.com/photo-1520440229-6469a149ac59?w=800&q=80',
+    'bali': 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80',
+    'taipei': 'https://images.unsplash.com/photo-1470004914212-05527e49370b?w=800&q=80',
+    'prague': 'https://images.unsplash.com/photo-1541849546-216549ae216d?w=800&q=80',
+    'vienna': 'https://images.unsplash.com/photo-1516550893923-42d28e5677af?w=800&q=80',
+    'lisbon': 'https://images.unsplash.com/photo-1558369981-f9ca78462e61?w=800&q=80',
+    'athens': 'https://images.unsplash.com/photo-1555993539-1732b0258235?w=800&q=80',
+    'dublin': 'https://images.unsplash.com/photo-1549918864-48ac978761a4?w=800&q=80',
+    'copenhagen': 'https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=800&q=80',
+    'moscow': 'https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800&q=80',
+    'mumbai': 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=800&q=80',
     'default': 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80'
 };
 
@@ -139,6 +161,40 @@ const MAJOR_CITIES = [
     { name: 'São Paulo', country: 'Brazil', lat: -23.5505, lng: -46.6333 },
 ];
 
+// Top 30 most visited international travel destinations
+const TOP_TRAVEL_DESTINATIONS = [
+    { city: 'Bangkok', country: 'Thailand', color: '#FF6B6B' },
+    { city: 'Paris', country: 'France', color: '#4ECDC4' },
+    { city: 'London', country: 'United Kingdom', color: '#45B7D1' },
+    { city: 'Dubai', country: 'UAE', color: '#96CEB4' },
+    { city: 'Singapore', country: 'Singapore', color: '#FFEAA7' },
+    { city: 'Kuala Lumpur', country: 'Malaysia', color: '#DDA0DD' },
+    { city: 'New York', country: 'United States', color: '#98D8C8' },
+    { city: 'Istanbul', country: 'Turkey', color: '#F7DC6F' },
+    { city: 'Tokyo', country: 'Japan', color: '#BB8FCE' },
+    { city: 'Antalya', country: 'Turkey', color: '#85C1E9' },
+    { city: 'Seoul', country: 'South Korea', color: '#F1948A' },
+    { city: 'Osaka', country: 'Japan', color: '#82E0AA' },
+    { city: 'Mecca', country: 'Saudi Arabia', color: '#F5B041' },
+    { city: 'Phuket', country: 'Thailand', color: '#AED6F1' },
+    { city: 'Pattaya', country: 'Thailand', color: '#D7BDE2' },
+    { city: 'Milan', country: 'Italy', color: '#A3E4D7' },
+    { city: 'Barcelona', country: 'Spain', color: '#FAD7A0' },
+    { city: 'Bali', country: 'Indonesia', color: '#A9DFBF' },
+    { city: 'Hong Kong', country: 'China', color: '#F9E79F' },
+    { city: 'Amsterdam', country: 'Netherlands', color: '#D2B4DE' },
+    { city: 'Rome', country: 'Italy', color: '#AEB6BF' },
+    { city: 'Taipei', country: 'Taiwan', color: '#FADBD8' },
+    { city: 'Prague', country: 'Czech Republic', color: '#D5F5E3' },
+    { city: 'Vienna', country: 'Austria', color: '#FCF3CF' },
+    { city: 'Lisbon', country: 'Portugal', color: '#E8DAEF' },
+    { city: 'Athens', country: 'Greece', color: '#D6EAF8' },
+    { city: 'Dublin', country: 'Ireland', color: '#D4EFDF' },
+    { city: 'Copenhagen', country: 'Denmark', color: '#FDEBD0' },
+    { city: 'Moscow', country: 'Russia', color: '#EBDEF0' },
+    { city: 'Mumbai', country: 'India', color: '#E5E8E8' },
+];
+
 // Calculate distance between two points using Haversine formula
 function getDistance(lat1, lng1, lat2, lng2) {
     const R = 6371; // Earth's radius in km
@@ -166,13 +222,27 @@ function getNearestCity(lat, lng) {
     return { ...nearest, distance: Math.round(minDistance) };
 }
 
-export function CityList({ friends = [], userLocation, user, onSelectCity, onSelectFriend, onInvite, onToggleGhostMode, onUpdateLocation, onMapView, onSettings, ghostMode = false, notificationsMuted = false, onToggleNotifications, onRefresh, refreshing = false }) {
+export function CityList({ friends = [], userLocation, user, onSelectCity, onSelectFriend, onInvite, onToggleGhostMode, onUpdateLocation, onRequestLocation, onMapView, onShowFriends, onSettings, ghostMode = false, notificationsMuted = false, onToggleNotifications, onRefresh, refreshing = false, onGoToUserLocation }) {
     // Pull-to-refresh state
     const [pullDistance, setPullDistance] = useState(0);
     const [isPulling, setIsPulling] = useState(false);
+    const [showIncentiveModal, setShowIncentiveModal] = useState(false);
+    const [incentiveCity, setIncentiveCity] = useState(null);
     const containerRef = useRef(null);
     const startY = useRef(0);
     const PULL_THRESHOLD = 80;
+
+    // Randomly select 10 cities from the top 30 destinations (memoized to keep stable)
+    const suggestedCities = useMemo(() => {
+        // Filter out cities where user already has friends
+        const existingCities = new Set(friends.map(f => f.city?.toLowerCase()).filter(Boolean));
+        const availableCities = TOP_TRAVEL_DESTINATIONS.filter(
+            dest => !existingCities.has(dest.city.toLowerCase())
+        );
+        // Shuffle and take 10
+        const shuffled = [...availableCities].sort(() => Math.random() - 0.5);
+        return shuffled.slice(0, 10);
+    }, [friends]);
 
     const handleTouchStart = useCallback((e) => {
         if (containerRef.current?.scrollTop === 0) {
@@ -314,6 +384,23 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
         return cities;
     }, [friends, userLocation, user, ghostMode]);
 
+    // Calculate user's estimated city for the location banner
+    const userEstimatedCity = useMemo(() => {
+        if (!userLocation?.lat || !userLocation?.lng) return null;
+
+        const userLat = parseFloat(userLocation.lat);
+        const userLng = parseFloat(userLocation.lng);
+        if (isNaN(userLat) || isNaN(userLng)) return null;
+
+        const PROXIMITY_THRESHOLD_KM = 30;
+        const nearestMajor = getNearestCity(userLat, userLng);
+
+        if (nearestMajor.distance <= PROXIMITY_THRESHOLD_KM) {
+            return nearestMajor.name;
+        }
+        return userLocation.city || 'Your Location';
+    }, [userLocation]);
+
     return (
         <div
             className="city-list-container"
@@ -352,7 +439,8 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                 </div>
             )}
             {/* Header */}
-            <header className="header">
+            <header className="header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem', position: 'relative' }}>
+                {/* Top row: Avatar + Title + Notification Bell */}
                 <div className="flex items-center gap-3">
                     {/* User Avatar - clickable to settings */}
                     <div
@@ -369,7 +457,8 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
-                            transition: 'transform 0.2s, box-shadow 0.2s'
+                            transition: 'transform 0.2s, box-shadow 0.2s',
+                            flexShrink: 0
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                         onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -380,59 +469,137 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                             <span className="material-symbols-outlined" style={{ color: 'var(--accent-lime)', fontSize: '1.5rem' }}>person</span>
                         )}
                     </div>
-                    <div style={{ lineHeight: 1.1 }}>
-                        <h1 style={{
-                            fontSize: '1.3rem',
-                            fontWeight: 800,
-                            letterSpacing: '0.02em',
-                            textTransform: 'uppercase',
-                            color: 'white',
-                            marginBottom: '0'
-                        }}>Where In</h1>
-                        <h1 style={{
-                            fontSize: '2.2rem',
-                            fontWeight: 900,
-                            letterSpacing: '-0.02em',
-                            textTransform: 'uppercase',
-                            color: 'white',
-                            marginTop: '-2px'
-                        }}>World</h1>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {onInvite && (
-                        <button
-                            className="btn-hard"
-                            style={{ width: '3rem', height: '3rem', padding: 0, background: 'var(--accent-lime)', color: 'black' }}
-                            onClick={onInvite}
-                            title="Invite Friends"
-                        >
-                            <span className="material-symbols-outlined">person_add</span>
-                        </button>
-                    )}
+                    <h1 style={{
+                        fontSize: '1.5rem',
+                        fontWeight: 900,
+                        letterSpacing: '0.05em',
+                        textTransform: 'uppercase',
+                        fontStyle: 'italic',
+                        transform: 'skewX(-6deg)',
+                        color: 'white',
+                        whiteSpace: 'nowrap',
+                        flex: 1
+                    }}>Where In World</h1>
+
+                    {/* Notification Bell - Top Right */}
                     <button
-                        className="btn-hard"
-                        style={{
-                            width: '3rem',
-                            height: '3rem',
-                            padding: 0,
-                            background: notificationsMuted ? '#ef4444' : 'var(--surface-dark)',
-                            transition: 'background 0.2s'
-                        }}
                         onClick={onToggleNotifications}
+                        style={{
+                            width: '2.5rem',
+                            height: '2.5rem',
+                            borderRadius: '50%',
+                            background: 'transparent',
+                            border: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'transform 0.2s'
+                        }}
                         title={notificationsMuted ? 'Unmute Notifications' : 'Mute Notifications'}
                     >
-                        <span className="material-symbols-outlined">
+                        <span className="material-symbols-outlined filled" style={{
+                            fontSize: '1.5rem',
+                            color: '#ef4444'
+                        }}>
                             {notificationsMuted ? 'notifications_off' : 'notifications'}
                         </span>
                     </button>
                 </div>
+
+                {/* Bottom row: Centered Add Friend button */}
+                <div className="flex items-center justify-center">
+                    {onInvite && (
+                        <button
+                            className="btn-hard"
+                            style={{
+                                height: '2.5rem',
+                                padding: '0 3rem',
+                                minWidth: '12rem',
+                                background: 'var(--accent-lime)',
+                                color: 'black',
+                                fontSize: '0.8125rem',
+                                fontWeight: 800,
+                                textTransform: 'uppercase',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                borderRadius: '2rem',
+                                border: '2px solid black',
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s, box-shadow 0.2s'
+                            }}
+                            onClick={onInvite}
+                            title="Invite Friends"
+                        >
+                            <span className="material-symbols-outlined" style={{ fontSize: '1.125rem' }}>person_add</span>
+                            Add Friends
+                        </button>
+                    )}
+                </div>
             </header>
 
-            {/* Ghost Mode Toggle */}
-            <section className="px-6 mb-4">
-                <div className="card-hard" style={{ overflow: 'hidden' }}>
-                    <div className="flex items-center justify-between p-4" style={{ background: ghostMode ? '#0d0d1a' : 'var(--graphic-paper)' }}>
+            {/* Location & Ghost Mode Combined Card */}
+            <section className="px-6 mb-6">
+                <div className="card-hard" style={{ overflow: 'hidden', borderRadius: '1rem' }}>
+                    {/* Location Banner - Top Section */}
+                    <div
+                        className="flex items-center justify-between p-4"
+                        style={{
+                            background: ghostMode ? '#1a1a2e' : (!userLocation && !ghostMode ? 'var(--accent-lime)' : 'white'),
+                            cursor: ghostMode ? 'default' : 'pointer'
+                        }}
+                        onClick={ghostMode ? undefined : (userLocation ? onUpdateLocation : onRequestLocation)}
+                    >
+                        <div className="flex items-center gap-3">
+                            <div style={{
+                                width: '2.5rem',
+                                height: '2.5rem',
+                                background: ghostMode ? 'transparent' : 'black',
+                                color: ghostMode ? 'white' : 'var(--accent-lime)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: ghostMode ? 'none' : '2px solid black'
+                            }}>
+                                {ghostMode ? (
+                                    <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M50 10C30 10 20 30 20 50C20 70 25 90 30 90C35 90 35 80 40 80C45 80 45 90 50 90C55 90 55 80 60 80C65 80 65 90 70 90C75 90 80 70 80 50C80 30 70 10 50 10Z" stroke="white" strokeWidth="3" fill="none" />
+                                        <circle cx="38" cy="45" r="5" fill="white" />
+                                        <circle cx="62" cy="45" r="5" fill="white" />
+                                        <ellipse cx="50" cy="60" rx="6" ry="8" fill="white" />
+                                    </svg>
+                                ) : !userLocation ? (
+                                    <span className="material-symbols-outlined filled">location_off</span>
+                                ) : (
+                                    <span className="material-symbols-outlined filled">my_location</span>
+                                )}
+                            </div>
+                            <div className="flex flex-col">
+                                {!userLocation && !ghostMode ? (
+                                    <>
+                                        <span style={{ fontSize: '0.625rem', fontWeight: 900, color: 'black', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Tap to</span>
+                                        <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'black', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 }}>Enable Location</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span style={{ fontSize: '0.625rem', fontWeight: 900, color: ghostMode ? 'rgba(255,255,255,0.6)' : 'black', textTransform: 'uppercase', letterSpacing: '0.1em' }}>You are in</span>
+                                        <span style={{ fontSize: '1.25rem', fontWeight: 900, color: ghostMode ? 'white' : 'black', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                                            {ghostMode ? 'The Bermuda Triangle' : (userEstimatedCity || userLocation?.city || 'Unknown')}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        {!ghostMode && (
+                            <span className="material-symbols-outlined" style={{ color: 'black' }}>
+                                {userLocation ? 'refresh' : 'chevron_right'}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Ghost Mode Toggle - Bottom Section */}
+                    <div className="flex items-center justify-between p-4" style={{ borderTop: '2px solid black', background: ghostMode ? '#0d0d1a' : 'var(--graphic-paper)' }}>
                         <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined" style={{ color: ghostMode ? 'var(--accent-lime)' : 'black' }}>visibility_off</span>
                             <span style={{ fontSize: '1.125rem', fontWeight: 800, color: ghostMode ? 'var(--accent-lime)' : 'black', textTransform: 'uppercase' }}>Ghost Mode</span>
@@ -464,36 +631,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                 </div>
             </section>
 
-            {/* Section Header */}
-            <div className="flex items-center justify-between px-6 py-4">
-                <h2 style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 900,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    fontStyle: 'italic',
-                    transform: 'skewX(-6deg)',
-                    color: 'white'
-                }}>
-                    List View
-                </h2>
-                <button
-                    onClick={onMapView}
-                    style={{
-                        color: 'var(--accent-lime)',
-                        fontSize: '1.25rem',
-                        fontWeight: 900,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        fontStyle: 'italic',
-                        transform: 'skewX(-6deg)',
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer'
-                    }}>
-                    Map View
-                </button>
-            </div>
+
 
             {/* City Cards */}
             <div className="flex flex-col gap-6 px-6 pb-28">
@@ -546,9 +684,10 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                 key={`${cityData.city}-${cityData.country}`}
                                 className="city-card"
                                 onClick={() => onSelectCity?.(cityData)}
+                                style={{ borderRadius: '1.25rem', overflow: 'hidden' }}
                             >
-                                {/* Background Image or Video */}
-                                <div className="city-card-image">
+                                {/* Image Area with Wave at Bottom */}
+                                <div className="city-card-image" style={{ position: 'relative' }}>
                                     {getCityVideo(cityData.city) ? (
                                         <video
                                             src={getCityVideo(cityData.city)}
@@ -565,22 +704,16 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                             loading="lazy"
                                         />
                                     )}
-                                    <div style={{
-                                        position: 'absolute',
-                                        inset: 0,
-                                        background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.5) 100%)'
-                                    }}></div>
-                                </div>
-
-                                {/* Wave Separator */}
-                                <div className="city-card-wave" style={{ color: color.bg }}>
-                                    <svg preserveAspectRatio="none" viewBox="0 0 1440 320" style={{ height: '4rem' }}>
-                                        <path d={wavePath} fill="currentColor" fillOpacity="1"></path>
-                                    </svg>
+                                    {/* Wave at bottom of image */}
+                                    <div className="city-card-wave" style={{ color: color.bg }}>
+                                        <svg preserveAspectRatio="none" viewBox="0 0 1440 320" style={{ height: '3rem' }}>
+                                            <path d={wavePath} fill="currentColor" fillOpacity="1"></path>
+                                        </svg>
+                                    </div>
                                 </div>
 
                                 {/* Content Area */}
-                                <div className="city-card-content" style={{ background: color.bg, paddingBottom: '1.5rem' }}>
+                                <div className="city-card-content" style={{ background: color.bg }}>
                                     <div className="flex items-start justify-between mb-4">
                                         <div>
                                             <h3 className="city-card-title">{cityData.city}</h3>
@@ -610,11 +743,11 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                     <div className="city-card-footer">
                                         {/* Avatar Stack */}
                                         <div className="avatar-stack-large">
-                                            {cityData.friends.slice(0, 4).map((friend, idx) => (
+                                            {cityData.friends.slice(0, 3).map((friend, idx) => (
                                                 <div key={friend.id} className="avatar-large" style={{
                                                     zIndex: 10 - idx,
-                                                    background: ['#A0E8AF', '#FF7F6C', '#C4A7E7', '#FFEB3B'][idx % 4],
-                                                    marginLeft: idx > 0 ? '-0.75rem' : 0
+                                                    background: ['#A0E8AF', '#FF7F6C', '#C4A7E7'][idx % 3],
+                                                    marginLeft: idx > 0 ? '-1rem' : 0
                                                 }}>
                                                     {friend.avatar_url ? (
                                                         <img src={friend.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
@@ -624,14 +757,15 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                                     )}
                                                 </div>
                                             ))}
-                                            {cityData.friends.length > 4 && (
+                                            {cityData.friends.length > 3 && (
                                                 <div className="avatar-large" style={{
                                                     background: 'white',
                                                     color: 'black',
-                                                    fontSize: '0.875rem',
-                                                    marginLeft: '-0.75rem'
+                                                    fontSize: '1rem',
+                                                    marginLeft: '-1rem',
+                                                    fontWeight: 900
                                                 }}>
-                                                    +{cityData.friends.length - 4}
+                                                    +{cityData.friends.length - 3}
                                                 </div>
                                             )}
                                         </div>
@@ -653,19 +787,112 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                         );
                     })
                 )}
+
+                {/* Incentive Section - Suggested Cities */}
+                {!ghostMode && suggestedCities.length > 0 && (
+                    <div className="incentive-section">
+                        <div className="incentive-header">
+                            <span className="material-symbols-outlined" style={{ color: 'var(--accent-lime)' }}>flight_takeoff</span>
+                            <h3>Friends around the world?</h3>
+                        </div>
+                        <p className="incentive-subtitle">Add friends to see them in these popular destinations</p>
+
+                        <div className="incentive-scroll-container">
+                            {suggestedCities.map((destination, idx) => {
+                                const cityImage = getCityImage(destination.city);
+                                return (
+                                    <div
+                                        key={`${destination.city}-${idx}`}
+                                        className="mini-city-card"
+                                        style={{
+                                            '--card-accent': destination.color,
+                                            animationDelay: `${idx * 0.05}s`
+                                        }}
+                                    >
+                                        {/* City Image */}
+                                        <div className="mini-city-image">
+                                            <img
+                                                src={cityImage}
+                                                alt={destination.city}
+                                                loading="lazy"
+                                            />
+                                            <div className="mini-city-overlay"></div>
+                                        </div>
+
+                                        {/* City Content */}
+                                        <div className="mini-city-content" style={{ background: destination.color }}>
+                                            <span className="mini-city-name">{destination.city}</span>
+                                            <span className="mini-city-country">{destination.country}</span>
+                                            <button
+                                                className="mini-add-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setIncentiveCity(destination);
+                                                    setShowIncentiveModal(true);
+                                                }}
+                                            >
+                                                <span className="material-symbols-outlined">person_add</span>
+                                                Add
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {/* Incentive Modal */}
+            {showIncentiveModal && (
+                <div className="incentive-modal-overlay" onClick={() => setShowIncentiveModal(false)}>
+                    <div className="incentive-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="incentive-modal-icon" style={{ background: incentiveCity?.color || 'var(--accent-lime)' }}>
+                            <span className="material-symbols-outlined">info</span>
+                        </div>
+                        <h3>About Friend Cities</h3>
+                        <p>
+                            When you add a friend, they'll appear in their <strong>current city</strong> —
+                            we only share city names, never exact addresses or GPS coordinates.
+                        </p>
+                        <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                            If your friend is in {incentiveCity?.city}, they'll show up there!
+                            They can also go "ghost" anytime to hide their city completely.
+                        </p>
+                        <div className="incentive-modal-actions">
+                            <button
+                                className="btn-primary"
+                                onClick={() => {
+                                    setShowIncentiveModal(false);
+                                    onInvite?.();
+                                }}
+                            >
+                                <span className="material-symbols-outlined">person_add</span>
+                                Add a Friend
+                            </button>
+                            <button
+                                className="btn-secondary"
+                                onClick={() => setShowIncentiveModal(false)}
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 .city-list-container {
                     position: relative;
                     display: flex;
                     flex-direction: column;
-                    min-height: 100vh;
+                    height: 100vh;
                     width: 100%;
                     max-width: 28rem;
                     margin: 0 auto;
                     background: var(--background-dark);
                     overflow-x: hidden;
+                    overflow-y: auto;
                     padding-bottom: 5rem;
                 }
                 
@@ -688,7 +915,297 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                     overflow: hidden;
                     flex-shrink: 0;
                 }
+
+                /* Incentive Section Styles */
+                .incentive-section {
+                    margin-top: 2rem;
+                    padding: 1.5rem;
+                    background: rgba(255, 255, 255, 0.03);
+                    border-radius: 1.5rem;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                }
+
+                .incentive-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    margin-bottom: 0.5rem;
+                }
+
+                .incentive-header h3 {
+                    font-size: 1.125rem;
+                    font-weight: 800;
+                    color: white;
+                    margin: 0;
+                }
+
+                .incentive-subtitle {
+                    font-size: 0.875rem;
+                    color: var(--text-muted);
+                    margin: 0 0 1.25rem 0;
+                }
+
+                /* Horizontal Scroll Container */
+                .incentive-scroll-container {
+                    display: flex;
+                    gap: 0.875rem;
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                    padding-bottom: 0.75rem;
+                    margin: 0 -1.5rem;
+                    padding-left: 1.5rem;
+                    padding-right: 1.5rem;
+                    scroll-snap-type: x mandatory;
+                    -webkit-overflow-scrolling: touch;
+                    scrollbar-width: none;
+                }
+
+                .incentive-scroll-container::-webkit-scrollbar {
+                    display: none;
+                }
+
+                /* Mini City Card */
+                .mini-city-card {
+                    flex-shrink: 0;
+                    width: 9rem;
+                    border-radius: 1rem;
+                    overflow: hidden;
+                    border: 2px solid rgba(255, 255, 255, 0.15);
+                    scroll-snap-align: start;
+                    transition: all 0.25s ease;
+                    animation: miniCardFadeIn 0.4s ease-out backwards;
+                }
+
+                @keyframes miniCardFadeIn {
+                    from {
+                        opacity: 0;
+                        transform: translateX(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                }
+
+                .mini-city-card:hover {
+                    border-color: var(--card-accent);
+                    transform: translateY(-4px);
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+                }
+
+                /* Mini City Image */
+                .mini-city-image {
+                    position: relative;
+                    width: 100%;
+                    height: 5.5rem;
+                    overflow: hidden;
+                }
+
+                .mini-city-image img {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                    transition: transform 0.3s ease;
+                }
+
+                .mini-city-card:hover .mini-city-image img {
+                    transform: scale(1.1);
+                }
+
+                .mini-city-overlay {
+                    position: absolute;
+                    inset: 0;
+                    background: linear-gradient(
+                        180deg,
+                        transparent 40%,
+                        rgba(0, 0, 0, 0.5) 100%
+                    );
+                }
+
+                /* Mini City Content */
+                .mini-city-content {
+                    padding: 0.625rem;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.25rem;
+                }
+
+                .mini-city-name {
+                    font-size: 0.8125rem;
+                    font-weight: 800;
+                    color: rgba(0, 0, 0, 0.85);
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    text-transform: uppercase;
+                    letter-spacing: 0.02em;
+                }
+
+                .mini-city-country {
+                    font-size: 0.6875rem;
+                    color: rgba(0, 0, 0, 0.6);
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    margin-bottom: 0.375rem;
+                }
+
+                .mini-add-btn {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.25rem;
+                    width: 100%;
+                    padding: 0.4rem;
+                    background: rgba(0, 0, 0, 0.15);
+                    border: 1.5px solid rgba(0, 0, 0, 0.2);
+                    border-radius: 0.5rem;
+                    color: rgba(0, 0, 0, 0.75);
+                    font-size: 0.6875rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    text-transform: uppercase;
+                    letter-spacing: 0.03em;
+                }
+
+                .mini-add-btn .material-symbols-outlined {
+                    font-size: 0.875rem;
+                }
+
+                .mini-add-btn:hover {
+                    background: rgba(0, 0, 0, 0.25);
+                    border-color: rgba(0, 0, 0, 0.4);
+                }
+
+                /* Incentive Modal Styles */
+                .incentive-modal-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0, 0, 0, 0.8);
+                    backdrop-filter: blur(8px);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 1000;
+                    padding: 1.5rem;
+                    animation: modalFadeIn 0.2s ease-out;
+                }
+
+                @keyframes modalFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                .incentive-modal {
+                    background: var(--surface-dark);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 1.5rem;
+                    padding: 1.75rem;
+                    max-width: 20rem;
+                    width: 100%;
+                    text-align: center;
+                    animation: modalSlideIn 0.3s ease-out;
+                }
+
+                @keyframes modalSlideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px) scale(0.95);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0) scale(1);
+                    }
+                }
+
+                .incentive-modal-icon {
+                    width: 3.5rem;
+                    height: 3.5rem;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 1rem;
+                }
+
+                .incentive-modal-icon .material-symbols-outlined {
+                    font-size: 1.75rem;
+                    color: rgba(0, 0, 0, 0.7);
+                }
+
+                .incentive-modal h3 {
+                    font-size: 1.125rem;
+                    font-weight: 800;
+                    color: white;
+                    margin: 0 0 0.75rem 0;
+                }
+
+                .incentive-modal p {
+                    font-size: 0.9375rem;
+                    color: var(--text-secondary);
+                    line-height: 1.5;
+                    margin: 0;
+                }
+
+                .incentive-modal-actions {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.625rem;
+                    margin-top: 1.5rem;
+                }
+
+                .incentive-modal .btn-primary {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                    width: 100%;
+                    padding: 0.875rem;
+                    background: var(--accent-lime);
+                    border: 2px solid black;
+                    border-radius: 0.75rem;
+                    color: black;
+                    font-size: 0.875rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: transform 0.2s, box-shadow 0.2s;
+                }
+
+                .incentive-modal .btn-primary:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(204, 255, 0, 0.3);
+                }
+
+                .incentive-modal .btn-secondary {
+                    width: 100%;
+                    padding: 0.75rem;
+                    background: transparent;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 0.75rem;
+                    color: var(--text-muted);
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .incentive-modal .btn-secondary:hover {
+                    border-color: rgba(255, 255, 255, 0.4);
+                    color: white;
+                }
             `}</style>
+
+            {/* Floating Bottom Navigation */}
+            <BottomNav
+                activeTab="cities"
+                onTabChange={(tab) => {
+                    if (tab === 'map') onMapView?.();
+                    if (tab === 'friends') onShowFriends?.();
+                    if (tab === 'you') onSettings?.();
+                }}
+                onLocationPress={onGoToUserLocation}
+            />
         </div>
     );
 }

@@ -466,8 +466,8 @@ body {
 
 /* Extra large avatars for city cards */
 .avatar-large {
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 4rem;
+  height: 4rem;
   border-radius: 50%;
   background: var(--primary);
   border: 3px solid var(--text-black);
@@ -475,7 +475,7 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   color: var(--text-black);
   flex-shrink: 0;
   overflow: hidden;
@@ -487,7 +487,7 @@ body {
 }
 
 .avatar-stack-large .avatar-large:not(:first-child) {
-  margin-left: -0.75rem;
+  margin-left: -1rem;
 }
 
 /* Online indicator */
@@ -518,7 +518,8 @@ body {
 .city-card {
   position: relative;
   width: 100%;
-  height: 20rem;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   background: white;
   border: 2px solid white;
@@ -530,16 +531,17 @@ body {
 }
 
 .city-card-image {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  width: 100%;
+  height: 12rem;
   background: var(--text-black);
+  flex-shrink: 0;
 }
 
 .city-card-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.9;
 }
 
 .city-card-wave {
@@ -547,6 +549,7 @@ body {
   bottom: 0;
   left: 0;
   width: 100%;
+  z-index: 5;
 }
 
 .city-card-wave svg {
@@ -556,10 +559,16 @@ body {
   transform: translateY(1px) scaleX(1.02);
 }
 
+.city-card-wave-top {
+  display: none;
+  /* No longer needed */
+}
+
 .city-card-content {
   position: relative;
   padding: 1.25rem;
-  padding-top: 0;
+  padding-top: 0.75rem;
+  flex-shrink: 0;
 }
 
 .city-card-title {

@@ -195,18 +195,18 @@ export default async function handler(req, res) {
                 return res.status(500).json({ error: 'Database not configured' });
             }
 
-            // Check if user already has an active invite
+            // Check if user already has an active invite (not fully used)
             const { data: existingInvite } = await supabase
                 .from('invites')
                 .select('*')
                 .eq('user_id', user.id)
                 .is('phone_sent_to', null)
-                .is('accepted_at', null)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .single();
 
-            if (existingInvite) {
+            // Return existing invite if it has uses remaining
+            if (existingInvite && existingInvite.use_count < (existingInvite.max_uses || 100)) {
                 const inviteUrl = `${getBaseUrl(req)}/join/${existingInvite.code}`;
                 return res.status(200).json({
                     success: true,
@@ -214,18 +214,22 @@ export default async function handler(req, res) {
                         id: existingInvite.id,
                         code: existingInvite.code,
                         url: inviteUrl,
-                        createdAt: existingInvite.created_at
+                        createdAt: existingInvite.created_at,
+                        useCount: existingInvite.use_count,
+                        maxUses: existingInvite.max_uses || 100
                     }
                 });
             }
 
-            // Create new invite
+            // Create new invite with multi-use support
             const code = generateInviteCode();
             const { data: invite, error } = await supabase
                 .from('invites')
                 .insert({
                     user_id: user.id,
-                    code
+                    code,
+                    max_uses: 100,
+                    use_count: 0
                 })
                 .select()
                 .single();
@@ -239,7 +243,9 @@ export default async function handler(req, res) {
                     id: invite.id,
                     code: invite.code,
                     url: inviteUrl,
-                    createdAt: invite.created_at
+                    createdAt: invite.created_at,
+                    useCount: 0,
+                    maxUses: 100
                 }
             });
         }
@@ -412,16 +418,21 @@ export default async function handler(req, res) {
                 return res.status(500).json({ error: 'Database not configured' });
             }
 
-            // Find the invite
+            // Find the invite (support multi-use: check use_count < max_uses)
             const { data: invite } = await supabase
                 .from('invites')
-                .select('*')
+                .select('*, users!invites_user_id_fkey(id, display_name, phone)')
                 .eq('code', codeValidation.cleaned)
-                .is('accepted_at', null)
                 .single();
 
             if (!invite) {
-                return res.status(404).json({ error: 'Invite not found or already used' });
+                return res.status(404).json({ error: 'Invite not found' });
+            }
+
+            // Check if invite is fully used
+            const maxUses = invite.max_uses || 100;
+            if (invite.use_count >= maxUses) {
+                return res.status(410).json({ error: 'Invite link has reached maximum uses' });
             }
 
             // Can't accept your own invite
@@ -434,12 +445,31 @@ export default async function handler(req, res) {
                 return res.status(410).json({ error: 'Invite has expired' });
             }
 
-            // Mark invite as accepted
+            // Check if this user already accepted this invite
+            const { data: existingAcceptance } = await supabase
+                .from('invite_acceptances')
+                .select('id')
+                .eq('invite_id', invite.id)
+                .eq('user_id', user.id)
+                .single();
+
+            if (existingAcceptance) {
+                return res.status(400).json({ error: 'You have already used this invite link' });
+            }
+
+            // Record the acceptance
+            await supabase
+                .from('invite_acceptances')
+                .insert({
+                    invite_id: invite.id,
+                    user_id: user.id
+                });
+
+            // Increment use count
             await supabase
                 .from('invites')
                 .update({
-                    accepted_at: new Date().toISOString(),
-                    accepted_by: user.id
+                    use_count: (invite.use_count || 0) + 1
                 })
                 .eq('id', invite.id);
 
@@ -461,7 +491,11 @@ export default async function handler(req, res) {
 
             return res.status(200).json({
                 success: true,
-                message: 'Friendship created'
+                message: 'Friendship created',
+                inviter: {
+                    id: invite.users?.id,
+                    displayName: invite.users?.display_name || 'Your friend'
+                }
             });
         }
 

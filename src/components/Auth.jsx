@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
 import { api, isDemoMode } from '../lib/supabase';
+import { SplashScreen } from './SplashScreen';
 
 export function Auth({ onAuthenticated }) {
-  const [step, setStep] = useState('phone'); // 'phone', 'otp', 'name', 'avatar'
+  const [step, setStep] = useState('splash'); // 'splash', 'phone', 'otp', 'name', 'avatar'
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [name, setName] = useState('');
@@ -137,222 +138,235 @@ export function Auth({ onAuthenticated }) {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card animate-slide-up">
-        {/* Logo */}
-        <div className="auth-logo">
-          <div className="logo-icon">
-            <span className="material-symbols-outlined" style={{ fontSize: '4rem', color: 'var(--primary)' }}>
-              public
-            </span>
+    <>
+      {step === 'splash' && (
+        <SplashScreen onComplete={() => setStep('phone')} />
+      )}
+      <div className={`auth-container ${step === 'splash' ? 'hidden' : ''}`}>
+        <div className="auth-card animate-slide-up">
+          {/* Logo */}
+          <div className="auth-logo">
+            <div className="logo-icon">
+              <span className="material-symbols-outlined" style={{ fontSize: '4rem', color: 'var(--primary)' }}>
+                public
+              </span>
+            </div>
+            <h1 className="logo-text">Where In World</h1>
+            <p className="logo-tagline">See where your friends are</p>
           </div>
-          <h1 className="logo-text">Where In World</h1>
-          <p className="logo-tagline">See where your friends are</p>
-        </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="auth-form">
-          {step === 'phone' && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Your phone number</label>
-                <input
-                  type="tel"
-                  className="input"
-                  placeholder="+1 (555) 123-4567"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  required
-                  autoFocus
-                />
-                <p className="form-hint">
-                  We use your phone number to connect you with friends
-                </p>
-              </div>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={loading || !phone.trim()}
-              >
-                {loading ? 'Sending...' : 'Continue'}
-              </button>
-            </>
-          )}
-
-          {step === 'otp' && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Enter verification code</label>
-                <p className="form-hint" style={{ marginBottom: '1rem' }}>
-                  We sent a 6-digit code to {phone}
-                </p>
-                <div className="otp-inputs" onPaste={handleOtpPaste}>
-                  {otp.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={el => otpRefs.current[i] = el}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      className="otp-input"
-                      value={digit}
-                      onChange={(e) => handleOtpChange(i, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                      autoFocus={i === 0}
-                    />
-                  ))}
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="auth-form">
+            {step === 'phone' && (
+              <>
+                <div className="form-group">
+                  <label className="form-label">Your phone number</label>
+                  <input
+                    type="tel"
+                    className="input"
+                    placeholder="+1 (555) 123-4567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                  <p className="form-hint">
+                    We use your phone number to connect you with friends
+                  </p>
                 </div>
-              </div>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={loading || otp.join('').length !== 6}
-              >
-                {loading ? 'Verifying...' : 'Verify Code'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={handleResend}
-                disabled={loading || resendTimer > 0}
-              >
-                {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend code'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => { setStep('phone'); setOtp(['', '', '', '', '', '']); }}
-              >
-                Change number
-              </button>
-            </>
-          )}
-
-          {step === 'name' && (
-            <>
-              <div className="form-group">
-                <label className="form-label">What should we call you?</label>
-                <input
-                  type="text"
-                  className="input"
-                  placeholder="Your name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  autoFocus
-                />
-                <p className="form-hint">
-                  This is how you'll appear to friends
-                </p>
-              </div>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={loading || !name.trim()}
-              >
-                {loading ? 'Setting up...' : 'Continue'}
-              </button>
-            </>
-          )}
-
-          {step === 'avatar' && (
-            <>
-              <div className="form-group">
-                <label className="form-label">Add a profile photo</label>
-                <p className="form-hint" style={{ marginBottom: '1.5rem' }}>
-                  Help friends recognize you
-                </p>
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setAvatarFile(file);
-                      const reader = new FileReader();
-                      reader.onload = (ev) => setAvatarPreview(ev.target.result);
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                />
-
-                <div
-                  className="avatar-picker"
-                  onClick={() => fileInputRef.current?.click()}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading || !phone.trim()}
                 >
-                  {avatarPreview ? (
-                    <img src={avatarPreview} alt="Avatar preview" className="avatar-preview" />
-                  ) : (
-                    <div className="avatar-placeholder">
-                      <span className="material-symbols-outlined" style={{ fontSize: '3rem', color: 'var(--text-muted)' }}>
-                        add_a_photo
-                      </span>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                        Tap to add photo
-                      </span>
-                    </div>
-                  )}
+                  {loading ? 'Sending...' : 'Continue'}
+                </button>
+              </>
+            )}
+
+            {step === 'otp' && (
+              <>
+                <div className="form-group">
+                  <label className="form-label">Enter verification code</label>
+                  <p className="form-hint" style={{ marginBottom: '1rem' }}>
+                    We sent a 6-digit code to {phone}
+                  </p>
+                  <div className="otp-inputs" onPaste={handleOtpPaste}>
+                    {otp.map((digit, i) => (
+                      <input
+                        key={i}
+                        ref={el => otpRefs.current[i] = el}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        className="otp-input"
+                        value={digit}
+                        onChange={(e) => handleOtpChange(i, e.target.value)}
+                        onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                        autoFocus={i === 0}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={loading}
-              >
-                {loading ? 'Saving...' : avatarFile ? 'Save & Continue' : 'Continue'}
-              </button>
-
-              {!avatarFile && (
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading || otp.join('').length !== 6}
+                >
+                  {loading ? 'Verifying...' : 'Verify Code'}
+                </button>
                 <button
                   type="button"
                   className="btn btn-ghost"
-                  onClick={() => onAuthenticated(verifiedUser)}
+                  onClick={handleResend}
+                  disabled={loading || resendTimer > 0}
+                >
+                  {resendTimer > 0 ? `Resend code in ${resendTimer}s` : 'Resend code'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => { setStep('phone'); setOtp(['', '', '', '', '', '']); }}
+                >
+                  Change number
+                </button>
+              </>
+            )}
+
+            {step === 'name' && (
+              <>
+                <div className="form-group">
+                  <label className="form-label">What should we call you?</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Your name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    autoFocus
+                  />
+                  <p className="form-hint">
+                    This is how you'll appear to friends
+                  </p>
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading || !name.trim()}
+                >
+                  {loading ? 'Setting up...' : 'Continue'}
+                </button>
+              </>
+            )}
+
+            {step === 'avatar' && (
+              <>
+                <div className="form-group">
+                  <label className="form-label">Add a profile photo</label>
+                  <p className="form-hint" style={{ marginBottom: '1.5rem' }}>
+                    Help friends recognize you
+                  </p>
+
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setAvatarFile(file);
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setAvatarPreview(ev.target.result);
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+
+                  <div
+                    className="avatar-picker"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {avatarPreview ? (
+                      <img src={avatarPreview} alt="Avatar preview" className="avatar-preview" />
+                    ) : (
+                      <>
+                        <div className="avatar-placeholder">
+                          <span className="material-symbols-outlined" style={{
+                            fontSize: '2.5rem',
+                            color: 'var(--accent-lime)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}>
+                            photo_camera
+                          </span>
+                          <span className="upload-text">UPLOAD</span>
+                        </div>
+                        <div className="avatar-compass">
+                          <span className="material-symbols-outlined">explore</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
                   disabled={loading}
                 >
-                  Skip for now
+                  {loading ? 'Saving...' : avatarFile ? 'Save & Continue' : 'Continue'}
                 </button>
-              )}
-            </>
-          )}
 
-          {error && (
-            <div className="error-message">
-              <span className="material-symbols-outlined" style={{ fontSize: '1.25rem' }}>error</span>
-              {error}
+                {!avatarFile && (
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => onAuthenticated(verifiedUser)}
+                    disabled={loading}
+                  >
+                    Skip for now
+                  </button>
+                )}
+              </>
+            )}
+
+            {error && (
+              <div className="error-message">
+                <span className="material-symbols-outlined" style={{ fontSize: '1.25rem' }}>error</span>
+                {error}
+              </div>
+            )}
+          </form>
+
+          {/* Demo mode notice */}
+          {isDemoMode() && (
+            <div className="demo-notice">
+              <span className="badge-primary">Demo Mode</span>
+              <span className="text-muted text-sm">No real SMS verification</span>
             </div>
           )}
-        </form>
+        </div>
 
-        {/* Demo mode notice */}
-        {isDemoMode() && (
-          <div className="demo-notice">
-            <span className="badge-primary">Demo Mode</span>
-            <span className="text-muted text-sm">No real SMS verification</span>
+        {/* Features */}
+        <div className="auth-features animate-fade-in">
+          <div className="feature">
+            <span className="material-symbols-outlined feature-icon">lock</span>
+            <span>Privacy-first: Only city-level location</span>
           </div>
-        )}
-      </div>
+          <div className="feature">
+            <span className="material-symbols-outlined feature-icon">group</span>
+            <span>Connect with existing contacts</span>
+          </div>
+          <div className="feature">
+            <span className="material-symbols-outlined feature-icon">location_on</span>
+            <span>Know when friends are nearby</span>
+          </div>
+        </div>
 
-      {/* Features */}
-      <div className="auth-features animate-fade-in">
-        <div className="feature">
-          <span className="material-symbols-outlined feature-icon">lock</span>
-          <span>Privacy-first: Only city-level location</span>
-        </div>
-        <div className="feature">
-          <span className="material-symbols-outlined feature-icon">group</span>
-          <span>Connect with existing contacts</span>
-        </div>
-        <div className="feature">
-          <span className="material-symbols-outlined feature-icon">location_on</span>
-          <span>Know when friends are nearby</span>
-        </div>
-      </div>
-
-      <style>{`
+        <style>{`
         .auth-container {
           min-height: 100vh;
           display: flex;
@@ -361,6 +375,10 @@ export function Auth({ onAuthenticated }) {
           justify-content: center;
           padding: 2.5rem 1.5rem;
           background: var(--background-dark);
+        }
+        
+        .auth-container.hidden {
+          display: none;
         }
         
         .auth-card {
@@ -503,29 +521,32 @@ export function Auth({ onAuthenticated }) {
         }
 
         .avatar-picker {
-          width: 8rem;
-          height: 8rem;
+          position: relative;
+          width: 10rem;
+          height: 10rem;
           margin: 0 auto;
           border-radius: var(--radius-full);
-          border: 3px dashed var(--surface-border);
+          border: 3px dashed var(--accent-lime);
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           transition: all var(--transition-fast);
-          overflow: hidden;
-          background: var(--background-dark);
+          overflow: visible;
+          background: transparent;
         }
         
         .avatar-picker:hover {
-          border-color: var(--primary);
-          background: rgba(99, 102, 241, 0.1);
+          border-color: var(--accent-lime);
+          background: rgba(204, 255, 0, 0.05);
+          transform: scale(1.02);
         }
         
         .avatar-preview {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          border-radius: 50%;
         }
         
         .avatar-placeholder {
@@ -533,12 +554,47 @@ export function Auth({ onAuthenticated }) {
           flex-direction: column;
           align-items: center;
           justify-content: center;
+          gap: 0.5rem;
+        }
+
+        .upload-text {
+          font-size: 0.875rem;
+          font-weight: 800;
+          color: var(--accent-lime);
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+        }
+
+        .avatar-compass {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 2.5rem;
+          height: 2.5rem;
+          background: black;
+          border: 2px solid var(--accent-lime);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          animation: spin 8s linear infinite;
+        }
+
+        .avatar-compass .material-symbols-outlined {
+          font-size: 1.25rem;
+          color: white;
+        }
+
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
 
         .btn {
           width: 100%;
         }
       `}</style>
-    </div>
+      </div>
+    </>
   );
 }
