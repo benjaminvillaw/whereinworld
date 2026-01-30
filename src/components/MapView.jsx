@@ -65,7 +65,7 @@ export function MapView({ friends = [], userLocation, onSelectCity }) {
 
     return (
         <div className="map-view-container">
-            <h2 className="map-title">Earth</h2>
+            <h2 className="map-title">Map View</h2>
 
             <div className="map-svg-container">
                 <svg

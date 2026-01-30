@@ -6,7 +6,6 @@ import { Auth } from './components/Auth';
 import { ContactSync } from './components/ContactSync';
 import { InviteFriends } from './components/InviteFriends';
 import { Settings } from './components/Settings';
-import { BottomNav } from './components/BottomNav';
 import { MapView } from './components/MapView';
 import { ArrivalNotification } from './components/ArrivalNotification';
 import { EngagementBanners } from './components/EngagementBanners';
@@ -372,12 +371,6 @@ function App() {
           </div>
         )}
       </main>
-
-      {/* Bottom Navigation */}
-      <BottomNav
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
 
       {/* Arrival Notification Modal */}
       {arrivals.length > 0 && !notificationsMuted && arrivals[0].friend && (

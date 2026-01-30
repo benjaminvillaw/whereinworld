@@ -475,7 +475,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                     transform: 'skewX(-6deg)',
                     color: 'white'
                 }}>
-                    Earth
+                    List View
                 </h2>
                 <button
                     onClick={onMapView}
