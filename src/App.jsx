@@ -148,10 +148,11 @@ function App() {
     }
 
     // Show contact sync prompt for new users
-    const contacts = await api.getContacts();
-    if (contacts.length === 0) {
-      setShowContactSync(true);
-    }
+    // DISABLED: Contact sync doesn't work on web - needs native app integration
+    // const contacts = await api.getContacts();
+    // if (contacts.length === 0) {
+    //   setShowContactSync(true);
+    // }
 
     loadFriends();
   };
