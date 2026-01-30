@@ -323,10 +323,10 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                         className="flex items-center justify-between p-4"
                         style={{ background: ghostMode ? '#1a1a2e' : 'white', cursor: 'pointer' }}
                         onClick={() => {
-                            if (!ghostMode && userLocation?.city) {
+                            if (!ghostMode) {
                                 onSelectCity?.({
-                                    name: userLocation.city,
-                                    country: userLocation.country || '',
+                                    name: userLocation?.city || 'Your Location',
+                                    country: userLocation?.country || '',
                                     friends: [] // User's own city, may have friends or not
                                 });
                             }
