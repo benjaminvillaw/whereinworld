@@ -72,13 +72,11 @@ function getCityImage(cityName) {
     return `https://source.unsplash.com/800x600/?${encodedCity}`;
 }
 
-// City videos - generated with Veo3 (placeholder URLs - replace with actual generated videos)
-// Videos should be 8-10 second looping clips, 1080p, hosted on your CDN
+// City videos - generated with Veo2 via Google AI Studio
+// Videos are 8-second looping clips stored locally
 const CITY_VIDEOS = {
-    // Uncomment and add your Veo3-generated video URLs here:
-    // 'boston': 'https://your-cdn.com/cities/boston.mp4',
-    // 'new york': 'https://your-cdn.com/cities/new-york.mp4',
-    // 'san francisco': 'https://your-cdn.com/cities/san-francisco.mp4',
+    'boston': '/videos/boston.mp4',
+    // More cities will be added as they are generated
 };
 
 function getCityVideo(cityName) {
