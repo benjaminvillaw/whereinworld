@@ -381,7 +381,7 @@ export const api = {
         if (supabase) {
             // Complex query to join contacts, users, and locations
             const { data, error } = await supabase.rpc('get_friends_with_locations', {
-                user_id: user.id
+                p_user_id: user.id
             });
             if (error) throw error;
             return data;
