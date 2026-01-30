@@ -464,6 +464,32 @@ body {
   margin-left: 0;
 }
 
+/* Extra large avatars for city cards */
+.avatar-large {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 3px solid var(--text-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--text-black);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-stack-large {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-stack-large .avatar-large:not(:first-child) {
+  margin-left: -0.75rem;
+}
+
 /* Online indicator */
 .avatar-status {
   position: relative;

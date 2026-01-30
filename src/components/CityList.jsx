@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useCallback } from 'react';
 
-// City images - using high quality Unsplash images
+// City images - curated high quality images for popular cities, with dynamic fallback
 const CITY_IMAGES = {
     'tokyo': 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80',
     'new york': 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80',
@@ -12,13 +12,33 @@ const CITY_IMAGES = {
     'sydney': 'https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=800&q=80',
     'dubai': 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800&q=80',
     'singapore': 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=800&q=80',
+    'boston': 'https://images.unsplash.com/photo-1501979376754-2ff867a4f659?w=800&q=80',
+    'chicago': 'https://images.unsplash.com/photo-1494522855154-9297ac14b55f?w=800&q=80',
+    'miami': 'https://images.unsplash.com/photo-1506966953602-c20cc11f75e3?w=800&q=80',
+    'seattle': 'https://images.unsplash.com/photo-1502175353174-a7a70e73b362?w=800&q=80',
+    'amsterdam': 'https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=800&q=80',
+    'barcelona': 'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&q=80',
+    'rome': 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&q=80',
+    'hong kong': 'https://images.unsplash.com/photo-1536599018102-9f803c140fc1?w=800&q=80',
+    'toronto': 'https://images.unsplash.com/photo-1517090504586-fde19ea6066f?w=800&q=80',
+    'vancouver': 'https://images.unsplash.com/photo-1559511260-66a68e7c8e80?w=800&q=80',
+    'denver': 'https://images.unsplash.com/photo-1546156929-a4c0ac411f47?w=800&q=80',
+    'austin': 'https://images.unsplash.com/photo-1531218150217-54595bc2b934?w=800&q=80',
+    'nashville': 'https://images.unsplash.com/photo-1545419913-775e3e48e48e?w=800&q=80',
+    'portland': 'https://images.unsplash.com/photo-1507245351670-7a1b4a7d4e91?w=800&q=80',
+    'atlanta': 'https://images.unsplash.com/photo-1575917649705-5b59aaa12e6b?w=800&q=80',
+    'philadelphia': 'https://images.unsplash.com/photo-1569761316261-9a8696fa2ca3?w=800&q=80',
+    'washington': 'https://images.unsplash.com/photo-1617581629397-a72507c3de9e?w=800&q=80',
+    'san diego': 'https://images.unsplash.com/photo-1538689621163-f60939e00d32?w=800&q=80',
+    'las vegas': 'https://images.unsplash.com/photo-1605833556294-ea5c7a74f57d?w=800&q=80',
+    'phoenix': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
     'default': 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80'
 };
 
-// Color palette for city cards
+// Color palette for city cards - lime first for user's city
 const CITY_COLORS = [
+    { bg: '#CCFF00', name: 'lime' },        // Lime (user's city)
     { bg: '#C4A7E7', name: 'lavender' },    // Lavender
-    { bg: '#CCFF00', name: 'lime' },        // Lime
     { bg: '#FFEB3B', name: 'yellow' },      // Yellow
     { bg: '#FF90B3', name: 'pink' },        // Pink
     { bg: '#A0E8AF', name: 'mint' },        // Mint
@@ -40,7 +60,16 @@ const MOCK_WEATHER = ['Clear', 'Cloudy', 'Rain', 'Sunny'];
 
 function getCityImage(cityName) {
     const key = cityName?.toLowerCase() || 'default';
-    return CITY_IMAGES[key] || CITY_IMAGES.default;
+
+    // Check if we have a curated image for this city
+    if (CITY_IMAGES[key]) {
+        return CITY_IMAGES[key];
+    }
+
+    // Use Unsplash Source API as dynamic fallback for any city
+    // This fetches a real, high-quality image based on the city name
+    const encodedCity = encodeURIComponent(cityName + ' city skyline');
+    return `https://source.unsplash.com/800x600/?${encodedCity}`;
 }
 
 function getWeatherIcon(weather) {
