@@ -167,6 +167,19 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
         const cityMap = new Map();
         const PROXIMITY_THRESHOLD_KM = 30; // Group cities within 30km as same metro area
 
+        // Determine user's metro area to exclude from city cards (shown separately at top)
+        let userMetroCity = null;
+        if (userLocation?.lat && userLocation?.lng) {
+            const userLat = parseFloat(userLocation.lat);
+            const userLng = parseFloat(userLocation.lng);
+            if (!isNaN(userLat) && !isNaN(userLng)) {
+                const userNearestMajor = getNearestCity(userLat, userLng);
+                userMetroCity = userNearestMajor.distance <= PROXIMITY_THRESHOLD_KM
+                    ? userNearestMajor.name.toLowerCase()
+                    : userLocation.city?.toLowerCase();
+            }
+        }
+
         // Group friends by nearest major city
         friends.forEach(friend => {
             const lat = parseFloat(friend.lat);
@@ -186,6 +199,11 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
             const displayCountry = nearestMajor.distance <= PROXIMITY_THRESHOLD_KM
                 ? nearestMajor.country
                 : country;
+
+            // Skip friends in user's metro area (they'll show in the "You are in" card)
+            if (userMetroCity && displayCity.toLowerCase() === userMetroCity) {
+                return;
+            }
 
             const key = `${displayCity}|${displayCountry}`;
 
@@ -216,7 +234,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
         });
 
         return cities;
-    }, [friends]);
+    }, [friends, userLocation]);
 
     return (
         <div
