@@ -53,15 +53,17 @@ function App() {
   // Track new friends joining via invite links
   const { newFriends, dismissNotification: dismissNewFriend } = useNewFriendNotifications(friends, user && !loading);
 
-  // Show location modal when needed
+  // Show location modal only when permission is denied (user explicitly blocked) or there's an explicit error
+  // This ensures the browser's native popup is shown first before our custom modal
   useEffect(() => {
-    // Show modal if permission is denied or there's an error
     if (user && !loading) {
-      if (permission === 'denied' || (locationError && !location)) {
+      // Only show modal if permission is explicitly denied by user
+      // Don't show it preemptively - let the browser prompt first
+      if (permission === 'denied') {
         setShowLocationModal(true);
       }
     }
-  }, [user, loading, permission, locationError, location]);
+  }, [user, loading, permission]);
 
   // Check if user needs to see onboarding (first time users)
   useEffect(() => {
@@ -371,6 +373,7 @@ function App() {
           setShowTerms(true);
         }}
         friends={friends}
+        userLocation={location}
         onInvite={() => {
           setShowSettings(false);
           setShowInvite(true);

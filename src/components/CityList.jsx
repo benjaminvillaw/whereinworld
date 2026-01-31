@@ -553,7 +553,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                     >
                         <div className="flex items-center gap-3">
                             <div
-                                className={userLocation && !ghostMode ? 'animate-location-pulse' : ''}
+                                className={userLocation && !ghostMode && !userLocation?.isApproximate ? 'animate-location-pulse' : ''}
                                 style={{
                                     width: '2.5rem',
                                     height: '2.5rem',
@@ -574,6 +574,8 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                     </svg>
                                 ) : !userLocation ? (
                                     <span className="material-symbols-outlined filled">location_off</span>
+                                ) : userLocation?.isApproximate ? (
+                                    <span className="material-symbols-outlined filled">near_me</span>
                                 ) : (
                                     <span className="material-symbols-outlined filled">my_location</span>
                                 )}
@@ -586,17 +588,24 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                     </>
                                 ) : (
                                     <>
-                                        <span style={{ fontSize: '0.625rem', fontWeight: 900, color: ghostMode ? 'rgba(255,255,255,0.6)' : 'black', textTransform: 'uppercase', letterSpacing: '0.1em' }}>You are in</span>
+                                        <span style={{ fontSize: '0.625rem', fontWeight: 900, color: ghostMode ? 'rgba(255,255,255,0.6)' : 'black', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                            {ghostMode ? 'You are in' : (userLocation?.isApproximate ? 'Estimated in' : 'You are in')}
+                                        </span>
                                         <span style={{ fontSize: '1.25rem', fontWeight: 900, color: ghostMode ? 'white' : 'black', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1 }}>
                                             {ghostMode ? 'The Bermuda Triangle' : (userEstimatedCity || userLocation?.city || 'Unknown')}
                                         </span>
+                                        {userLocation?.isApproximate && !ghostMode && (
+                                            <span style={{ fontSize: '0.6rem', color: 'rgba(0,0,0,0.5)', marginTop: '0.25rem' }}>
+                                                Tap to enable precise location
+                                            </span>
+                                        )}
                                     </>
                                 )}
                             </div>
                         </div>
                         {!ghostMode && (
                             <span className="material-symbols-outlined" style={{ color: 'black' }}>
-                                {userLocation ? 'refresh' : 'chevron_right'}
+                                {userLocation ? (userLocation?.isApproximate ? 'my_location' : 'refresh') : 'chevron_right'}
                             </span>
                         )}
                     </div>

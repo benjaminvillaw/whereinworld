@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/supabase';
 import { GlobalBadges } from './FriendProfilePopup';
 
-export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, onLogout, onUserUpdate, onShowPrivacyPolicy, onShowTerms, onInvite, friends = [] }) {
+export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, onLogout, onUserUpdate, onShowPrivacyPolicy, onShowTerms, onInvite, friends = [], userLocation = null }) {
     const [isGhostMode, setIsGhostMode] = useState(ghostMode);
     const [activeTab, setActiveTab] = useState('profile'); // 'profile' or 'privacy'
     const [editingName, setEditingName] = useState(false);
@@ -160,12 +160,36 @@ export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, o
                             <div className="profile-badges-section">
                                 <p className="profile-badges-label">Your Global Reach</p>
                                 <GlobalBadges
-                                    cities={(() => { const cities = new Set(); friends.forEach(f => f.location?.city && cities.add(f.location.city.toLowerCase())); return cities.size; })()}
-                                    countries={(() => { const countries = new Set(); friends.forEach(f => f.location?.country && countries.add(f.location.country.toLowerCase())); return countries.size; })()}
+                                    cities={(() => {
+                                        const cities = new Set();
+                                        // Include user's location if available
+                                        if (userLocation?.city) cities.add(userLocation.city.toLowerCase());
+                                        // Include friends' locations
+                                        friends.forEach(f => f.location?.city && cities.add(f.location.city.toLowerCase()));
+                                        return cities.size;
+                                    })()}
+                                    countries={(() => {
+                                        const countries = new Set();
+                                        // Include user's location if available
+                                        if (userLocation?.country) countries.add(userLocation.country.toLowerCase());
+                                        // Include friends' locations
+                                        friends.forEach(f => f.location?.country && countries.add(f.location.country.toLowerCase()));
+                                        return countries.size;
+                                    })()}
                                     compact={true}
                                 />
                                 <p className="profile-badges-text">
-                                    Friends in <strong>{(() => { const cities = new Set(); friends.forEach(f => f.location?.city && cities.add(f.location.city.toLowerCase())); return cities.size; })()}</strong> cities across <strong>{(() => { const countries = new Set(); friends.forEach(f => f.location?.country && countries.add(f.location.country.toLowerCase())); return countries.size; })()}</strong> countries
+                                    {userLocation?.isApproximate ? 'Estimated in' : 'You + friends in'} <strong>{(() => {
+                                        const cities = new Set();
+                                        if (userLocation?.city) cities.add(userLocation.city.toLowerCase());
+                                        friends.forEach(f => f.location?.city && cities.add(f.location.city.toLowerCase()));
+                                        return cities.size;
+                                    })()}</strong> cities across <strong>{(() => {
+                                        const countries = new Set();
+                                        if (userLocation?.country) countries.add(userLocation.country.toLowerCase());
+                                        friends.forEach(f => f.location?.country && countries.add(f.location.country.toLowerCase()));
+                                        return countries.size;
+                                    })()}</strong> countries
                                 </p>
                             </div>
                         </section>
