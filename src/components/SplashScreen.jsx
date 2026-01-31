@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export function SplashScreen({ onComplete }) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showContent, setShowContent] = useState(false);
+
+  // Store onComplete in a ref to prevent useEffect re-runs
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     // Show content after initial fade in
@@ -17,7 +21,7 @@ export function SplashScreen({ onComplete }) {
 
     // Complete transition
     const completeTimer = setTimeout(() => {
-      onComplete?.();
+      onCompleteRef.current?.();
     }, 3000);
 
     return () => {
@@ -25,7 +29,7 @@ export function SplashScreen({ onComplete }) {
       clearTimeout(transitionTimer);
       clearTimeout(completeTimer);
     };
-  }, [onComplete]);
+  }, []); // Empty deps - only run once
 
   return (
     <div className={`splash-screen ${isTransitioning ? 'transitioning' : ''}`}>
@@ -202,6 +206,16 @@ export function SplashScreen({ onComplete }) {
           transform: translate(-50%, -50%) rotate(-12deg);
           z-index: 20;
           background: transparent;
+          animation: orbit-wobble 3s ease-in-out infinite;
+        }
+        
+        @keyframes orbit-wobble {
+          0%, 100% {
+            transform: translate(-50%, -50%) rotate(-12deg);
+          }
+          50% {
+            transform: translate(-50%, -50%) rotate(12deg);
+          }
         }
 
         .splash-title {

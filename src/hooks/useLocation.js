@@ -117,7 +117,7 @@ export function useLocation() {
       if (!ipLocationAttempted) {
         setIpLocationAttempted(true);
         const ipLocation = await getLocationFromIP();
-        if (ipLocation && !location) {
+        if (ipLocation) {
           setLocation(ipLocation);
           // Store IP-based location with a flag so we know to upgrade later
           localStorage.setItem('whereinworld_location', JSON.stringify(ipLocation));
@@ -126,7 +126,7 @@ export function useLocation() {
     };
 
     initIPLocation();
-  }, [ipLocationAttempted, location]);
+  }, [ipLocationAttempted]); // Removed location from deps to prevent loop
 
   const requestLocation = useCallback(async () => {
     if (!('geolocation' in navigator)) {

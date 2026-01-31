@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * FriendJoinedNotification - Toast notification showing when a new friend joins via invite
@@ -109,20 +109,23 @@ export function FriendJoinedNotification({ friend, onDismiss }) {
  */
 export function useNewFriendNotifications(friends, enabled = true) {
     const [newFriends, setNewFriends] = useState([]);
-    const [previousFriendIds, setPreviousFriendIds] = useState(() => {
+    const previousFriendIdsRef = useRef(() => {
         const stored = localStorage.getItem('wiw_known_friend_ids');
         return stored ? JSON.parse(stored) : null;
     });
+    const [initialized, setInitialized] = useState(false);
 
     useEffect(() => {
         if (!enabled || !friends?.length) return;
 
         const currentFriendIds = friends.map(f => f.id);
+        const previousFriendIds = previousFriendIdsRef.current;
 
         // First load - just store the current friends
-        if (previousFriendIds === null) {
+        if (previousFriendIds === null || !initialized) {
             localStorage.setItem('wiw_known_friend_ids', JSON.stringify(currentFriendIds));
-            setPreviousFriendIds(currentFriendIds);
+            previousFriendIdsRef.current = currentFriendIds;
+            setInitialized(true);
             return;
         }
 
@@ -135,9 +138,9 @@ export function useNewFriendNotifications(friends, enabled = true) {
 
             // Update stored friend IDs
             localStorage.setItem('wiw_known_friend_ids', JSON.stringify(currentFriendIds));
-            setPreviousFriendIds(currentFriendIds);
+            previousFriendIdsRef.current = currentFriendIds;
         }
-    }, [friends, previousFriendIds, enabled]);
+    }, [friends, enabled, initialized]);
 
     const dismissNotification = (friendId) => {
         setNewFriends(prev => prev.filter(f => f.id !== friendId));

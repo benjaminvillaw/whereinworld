@@ -59,6 +59,7 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
     const mapContainerRef = useRef(null);
     const mapRef = useRef(null);
     const mapLoadedRef = useRef(false);
+    const cityMarkersRef = useRef([]); // Track custom avatar markers
 
     // Group friends by city
     const citiesData = useMemo(() => {
@@ -248,61 +249,8 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
                 data: citiesGeoJson
             });
 
-            // Add city circles layer
-            map.addLayer({
-                id: 'city-circles',
-                type: 'circle',
-                source: 'cities',
-                paint: {
-                    'circle-radius': [
-                        'interpolate', ['linear'], ['get', 'friendCount'],
-                        1, 18,
-                        5, 28,
-                        10, 38
-                    ],
-                    'circle-color': ['get', 'color'],
-                    'circle-stroke-color': '#000000',
-                    'circle-stroke-width': 3,
-                    'circle-opacity': 0.95
-                }
-            });
-
-            // Add friend count labels
-            map.addLayer({
-                id: 'city-count-labels',
-                type: 'symbol',
-                source: 'cities',
-                layout: {
-                    'text-field': ['to-string', ['get', 'friendCount']],
-                    'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
-                    'text-size': 14,
-                    'text-allow-overlap': true
-                },
-                paint: {
-                    'text-color': '#000000'
-                }
-            });
-
-            // Add city name labels
-            map.addLayer({
-                id: 'city-name-labels',
-                type: 'symbol',
-                source: 'cities',
-                layout: {
-                    'text-field': ['upcase', ['get', 'city']],
-                    'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
-                    'text-size': 11,
-                    'text-offset': [0, 2.5],
-                    'text-anchor': 'top',
-                    'text-allow-overlap': false,
-                    'text-letter-spacing': 0.05
-                },
-                paint: {
-                    'text-color': '#ffffff',
-                    'text-halo-color': 'rgba(0, 0, 0, 0.8)',
-                    'text-halo-width': 1
-                }
-            });
+            // Note: City markers are now handled by custom DOM markers with avatars
+            // (see the avatar markers useEffect)
 
             // Add user location source if available
             if (userGeoJson) {
@@ -361,24 +309,7 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
                 });
             }
 
-            // Handle city click
-            map.on('click', 'city-circles', (e) => {
-                if (e.features && e.features[0]) {
-                    const props = e.features[0].properties;
-                    const cityData = citiesData.find(c => c.city === props.city);
-                    if (cityData) {
-                        onSelectCity?.(cityData);
-                    }
-                }
-            });
-
-            // Change cursor on hover
-            map.on('mouseenter', 'city-circles', () => {
-                map.getCanvas().style.cursor = 'pointer';
-            });
-            map.on('mouseleave', 'city-circles', () => {
-                map.getCanvas().style.cursor = '';
-            });
+            // Note: City click/hover is now handled by avatar marker DOM elements
         });
 
         return () => {
@@ -399,6 +330,143 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
             source.setData(citiesGeoJson);
         }
     }, [citiesGeoJson]);
+
+    // Create and update avatar markers for cities
+    useEffect(() => {
+        if (!mapRef.current || !mapLoadedRef.current) return;
+
+        // Remove existing markers
+        cityMarkersRef.current.forEach(marker => marker.remove());
+        cityMarkersRef.current = [];
+
+        // Create new markers for each city
+        citiesData.forEach(city => {
+            if (!city.lat || !city.lng || city.friends.length === 0) return;
+
+            // Create marker element
+            const el = document.createElement('div');
+            el.className = 'city-avatar-marker';
+            el.style.cssText = `
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                position: relative;
+            `;
+
+            // Create avatar container
+            const avatarContainer = document.createElement('div');
+            avatarContainer.style.cssText = `
+                display: flex;
+                align-items: center;
+                position: relative;
+            `;
+
+            // Show up to 3 avatars, stacked
+            const maxAvatars = Math.min(city.friends.length, 3);
+            const avatarSize = 36;
+            const overlap = 12;
+
+            for (let i = 0; i < maxAvatars; i++) {
+                const friend = city.friends[i];
+                const avatarWrapper = document.createElement('div');
+                avatarWrapper.style.cssText = `
+                    width: ${avatarSize}px;
+                    height: ${avatarSize}px;
+                    border-radius: 50%;
+                    border: 3px solid ${city.color || '#CCFF00'};
+                    background: #1a1a1a;
+                    overflow: hidden;
+                    margin-left: ${i > 0 ? -overlap + 'px' : '0'};
+                    position: relative;
+                    z-index: ${maxAvatars - i};
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+                `;
+
+                if (friend.avatar_url) {
+                    const img = document.createElement('img');
+                    img.src = friend.avatar_url;
+                    img.style.cssText = `
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                    `;
+                    img.onerror = () => {
+                        // Fallback to initials on error
+                        avatarWrapper.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:${city.color};font-weight:bold;font-size:14px;">${(friend.display_name || friend.displayName || '?')[0].toUpperCase()}</div>`;
+                    };
+                    avatarWrapper.appendChild(img);
+                } else {
+                    // Show initials
+                    const initial = (friend.display_name || friend.displayName || '?')[0].toUpperCase();
+                    avatarWrapper.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:${city.color};font-weight:bold;font-size:14px;">${initial}</div>`;
+                }
+
+                avatarContainer.appendChild(avatarWrapper);
+            }
+
+            // Add count badge if more than shown
+            if (city.friends.length > maxAvatars) {
+                const badge = document.createElement('div');
+                badge.style.cssText = `
+                    position: absolute;
+                    right: -8px;
+                    top: -8px;
+                    background: ${city.color || '#CCFF00'};
+                    color: #000;
+                    font-size: 11px;
+                    font-weight: bold;
+                    padding: 2px 6px;
+                    border-radius: 10px;
+                    z-index: 10;
+                `;
+                badge.textContent = `+${city.friends.length - maxAvatars}`;
+                avatarContainer.appendChild(badge);
+            }
+
+            el.appendChild(avatarContainer);
+
+            // Create city label
+            const label = document.createElement('div');
+            label.style.cssText = `
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                margin-top: 4px;
+                font-size: 10px;
+                font-weight: bold;
+                color: white;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+                white-space: nowrap;
+            `;
+            label.textContent = city.city;
+            el.appendChild(label);
+
+            // Add click handler
+            el.addEventListener('click', () => {
+                onSelectCity?.({
+                    city: city.city,
+                    country: city.country,
+                    friends: city.friends
+                });
+            });
+
+            // Create and add marker
+            const marker = new mapboxgl.Marker({ element: el })
+                .setLngLat([city.lng, city.lat])
+                .addTo(mapRef.current);
+
+            cityMarkersRef.current.push(marker);
+        });
+
+        // Cleanup function
+        return () => {
+            cityMarkersRef.current.forEach(marker => marker.remove());
+        };
+    }, [citiesData, onSelectCity]);
 
     // Update user location when it changes
     useEffect(() => {
