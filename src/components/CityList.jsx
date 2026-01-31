@@ -54,6 +54,32 @@ const CITY_IMAGES = {
     'copenhagen': 'https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=800&q=80',
     'moscow': 'https://images.unsplash.com/photo-1513326738677-b964603b136d?w=800&q=80',
     'mumbai': 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=800&q=80',
+    // South America
+    'medellin': 'https://images.unsplash.com/photo-1599413556936-f1e0d51f4282?w=800&q=80',
+    'bogota': 'https://images.unsplash.com/photo-1568832205896-fa44b9d1d9d9?w=800&q=80',
+    'buenos aires': 'https://images.unsplash.com/photo-1589909202802-8f4aadce1849?w=800&q=80',
+    'rio de janeiro': 'https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=800&q=80',
+    'são paulo': 'https://images.unsplash.com/photo-1554168848-228552017086?w=800&q=80',
+    'lima': 'https://images.unsplash.com/photo-1577587230708-187fdbef4d91?w=800&q=80',
+    'santiago': 'https://images.unsplash.com/photo-1594850598263-d22d3a1c4f44?w=800&q=80',
+    // South Asia & Pakistan
+    'karachi': 'https://images.unsplash.com/photo-1572715376701-98568319fd0b?w=800&q=80',
+    'lahore': 'https://images.unsplash.com/photo-1570975640108-2292d83390ff?w=800&q=80',
+    'islamabad': 'https://images.unsplash.com/photo-1599687266725-0d4d52716b86?w=800&q=80',
+    'delhi': 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=800&q=80',
+    // Other cities
+    'cairo': 'https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=800&q=80',
+    'lagos': 'https://images.unsplash.com/photo-1618828665011-0abd973f7bb8?w=800&q=80',
+    'johannesburg': 'https://images.unsplash.com/photo-1577948000111-9c970dfe3743?w=800&q=80',
+    'cape town': 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=800&q=80',
+    'shanghai': 'https://images.unsplash.com/photo-1538428494232-9c0d8a3ab403?w=800&q=80',
+    'beijing': 'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=800&q=80',
+    'manila': 'https://images.unsplash.com/photo-1573455494060-c5595004fb6c?w=800&q=80',
+    'jakarta': 'https://images.unsplash.com/photo-1555899434-94d1368aa7af?w=800&q=80',
+    'mexico city': 'https://images.unsplash.com/photo-1585464231875-d9ef1f5ad396?w=800&q=80',
+    'melbourne': 'https://images.unsplash.com/photo-1514395462725-fb4566210144?w=800&q=80',
+    'auckland': 'https://images.unsplash.com/photo-1507699622108-4be3abd695ad?w=800&q=80',
+    'madrid': 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=800&q=80',
     'default': 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80'
 };
 
@@ -152,6 +178,7 @@ const WAVE_PATHS = [
 
 // Major cities database for nearest city lookup
 const MAJOR_CITIES = [
+    // North America
     { name: 'New York', country: 'United States', lat: 40.7128, lng: -74.0060 },
     { name: 'Los Angeles', country: 'United States', lat: 34.0522, lng: -118.2437 },
     { name: 'Chicago', country: 'United States', lat: 41.8781, lng: -87.6298 },
@@ -162,16 +189,52 @@ const MAJOR_CITIES = [
     { name: 'Boston', country: 'United States', lat: 42.3601, lng: -71.0589 },
     { name: 'Denver', country: 'United States', lat: 39.7392, lng: -104.9903 },
     { name: 'Atlanta', country: 'United States', lat: 33.7490, lng: -84.3880 },
+    { name: 'Toronto', country: 'Canada', lat: 43.6532, lng: -79.3832 },
+    { name: 'Vancouver', country: 'Canada', lat: 49.2827, lng: -123.1207 },
+    { name: 'Mexico City', country: 'Mexico', lat: 19.4326, lng: -99.1332 },
+    // South America
+    { name: 'São Paulo', country: 'Brazil', lat: -23.5505, lng: -46.6333 },
+    { name: 'Rio de Janeiro', country: 'Brazil', lat: -22.9068, lng: -43.1729 },
+    { name: 'Buenos Aires', country: 'Argentina', lat: -34.6037, lng: -58.3816 },
+    { name: 'Bogota', country: 'Colombia', lat: 4.7110, lng: -74.0721 },
+    { name: 'Medellin', country: 'Colombia', lat: 6.2442, lng: -75.5812 },
+    { name: 'Lima', country: 'Peru', lat: -12.0464, lng: -77.0428 },
+    { name: 'Santiago', country: 'Chile', lat: -33.4489, lng: -70.6693 },
+    // Europe
     { name: 'London', country: 'United Kingdom', lat: 51.5074, lng: -0.1278 },
     { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
-    { name: 'Tokyo', country: 'Japan', lat: 35.6762, lng: 139.6503 },
-    { name: 'Sydney', country: 'Australia', lat: -33.8688, lng: 151.2093 },
-    { name: 'Dubai', country: 'UAE', lat: 25.2048, lng: 55.2708 },
-    { name: 'Singapore', country: 'Singapore', lat: 1.3521, lng: 103.8198 },
     { name: 'Berlin', country: 'Germany', lat: 52.5200, lng: 13.4050 },
-    { name: 'Toronto', country: 'Canada', lat: 43.6532, lng: -79.3832 },
-    { name: 'Mexico City', country: 'Mexico', lat: 19.4326, lng: -99.1332 },
-    { name: 'São Paulo', country: 'Brazil', lat: -23.5505, lng: -46.6333 },
+    { name: 'Madrid', country: 'Spain', lat: 40.4168, lng: -3.7038 },
+    { name: 'Barcelona', country: 'Spain', lat: 41.3851, lng: 2.1734 },
+    { name: 'Rome', country: 'Italy', lat: 41.9028, lng: 12.4964 },
+    { name: 'Amsterdam', country: 'Netherlands', lat: 52.3676, lng: 4.9041 },
+    { name: 'Moscow', country: 'Russia', lat: 55.7558, lng: 37.6173 },
+    // Asia
+    { name: 'Tokyo', country: 'Japan', lat: 35.6762, lng: 139.6503 },
+    { name: 'Singapore', country: 'Singapore', lat: 1.3521, lng: 103.8198 },
+    { name: 'Dubai', country: 'UAE', lat: 25.2048, lng: 55.2708 },
+    { name: 'Hong Kong', country: 'China', lat: 22.3193, lng: 114.1694 },
+    { name: 'Shanghai', country: 'China', lat: 31.2304, lng: 121.4737 },
+    { name: 'Beijing', country: 'China', lat: 39.9042, lng: 116.4074 },
+    { name: 'Seoul', country: 'South Korea', lat: 37.5665, lng: 126.9780 },
+    { name: 'Bangkok', country: 'Thailand', lat: 13.7563, lng: 100.5018 },
+    { name: 'Mumbai', country: 'India', lat: 19.0760, lng: 72.8777 },
+    { name: 'Delhi', country: 'India', lat: 28.7041, lng: 77.1025 },
+    { name: 'Karachi', country: 'Pakistan', lat: 24.8607, lng: 67.0011 },
+    { name: 'Lahore', country: 'Pakistan', lat: 31.5204, lng: 74.3587 },
+    { name: 'Islamabad', country: 'Pakistan', lat: 33.6844, lng: 73.0479 },
+    { name: 'Jakarta', country: 'Indonesia', lat: -6.2088, lng: 106.8456 },
+    { name: 'Manila', country: 'Philippines', lat: 14.5995, lng: 120.9842 },
+    // Middle East & Africa
+    { name: 'Istanbul', country: 'Turkey', lat: 41.0082, lng: 28.9784 },
+    { name: 'Cairo', country: 'Egypt', lat: 30.0444, lng: 31.2357 },
+    { name: 'Lagos', country: 'Nigeria', lat: 6.5244, lng: 3.3792 },
+    { name: 'Johannesburg', country: 'South Africa', lat: -26.2041, lng: 28.0473 },
+    { name: 'Cape Town', country: 'South Africa', lat: -33.9249, lng: 18.4241 },
+    // Oceania
+    { name: 'Sydney', country: 'Australia', lat: -33.8688, lng: 151.2093 },
+    { name: 'Melbourne', country: 'Australia', lat: -37.8136, lng: 144.9631 },
+    { name: 'Auckland', country: 'New Zealand', lat: -36.8509, lng: 174.7645 },
 ];
 
 // Top 30 most visited international travel destinations
@@ -289,7 +352,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
     // Now includes current user as a special "friend" in their city
     const citiesData = useMemo(() => {
         const cityMap = new Map();
-        const PROXIMITY_THRESHOLD_KM = 30; // Group cities within 30km as same metro area
+        const PROXIMITY_THRESHOLD_KM = 50; // Group cities within 50km as same metro area
 
         // Determine user's metro area and add user as first "friend"
         let userMetroCityKey = null;
@@ -405,7 +468,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
         const userLng = parseFloat(userLocation.lng);
         if (isNaN(userLat) || isNaN(userLng)) return null;
 
-        const PROXIMITY_THRESHOLD_KM = 30;
+        const PROXIMITY_THRESHOLD_KM = 50;
         const nearestMajor = getNearestCity(userLat, userLng);
 
         if (nearestMajor.distance <= PROXIMITY_THRESHOLD_KM) {

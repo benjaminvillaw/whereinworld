@@ -8,16 +8,41 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || '';
 
 // Major cities database with coordinates (fallback for missing location data)
 const MAJOR_CITIES = [
+    // North America
     { name: 'New York', lat: 40.7128, lng: -74.0060, color: '#FF7F6C' },
     { name: 'Los Angeles', lat: 34.0522, lng: -118.2437, color: '#A0E8AF' },
-    { name: 'London', lat: 51.5074, lng: -0.1278, color: '#C4A7E7' },
-    { name: 'Paris', lat: 48.8566, lng: 2.3522, color: '#FFEB3B' },
-    { name: 'Tokyo', lat: 35.6762, lng: 139.6503, color: '#FF90B3' },
-    { name: 'Sydney', lat: -33.8688, lng: 151.2093, color: '#CCFF00' },
-    { name: 'Dubai', lat: 25.2048, lng: 55.2708, color: '#FF7F6C' },
-    { name: 'Singapore', lat: 1.3521, lng: 103.8198, color: '#A0E8AF' },
     { name: 'San Francisco', lat: 37.7749, lng: -122.4194, color: '#C4A7E7' },
     { name: 'Boston', lat: 42.3601, lng: -71.0589, color: '#FFEB3B' },
+    { name: 'Chicago', lat: 41.8781, lng: -87.6298, color: '#FF90B3' },
+    { name: 'Miami', lat: 25.7617, lng: -80.1918, color: '#CCFF00' },
+    { name: 'Seattle', lat: 47.6062, lng: -122.3321, color: '#FF7F6C' },
+    { name: 'Toronto', lat: 43.6532, lng: -79.3832, color: '#A0E8AF' },
+    { name: 'Mexico City', lat: 19.4326, lng: -99.1332, color: '#C4A7E7' },
+    // South America
+    { name: 'Medellin', lat: 6.2442, lng: -75.5812, color: '#FFEB3B' },
+    { name: 'Bogota', lat: 4.7110, lng: -74.0721, color: '#FF90B3' },
+    { name: 'São Paulo', lat: -23.5505, lng: -46.6333, color: '#CCFF00' },
+    { name: 'Buenos Aires', lat: -34.6037, lng: -58.3816, color: '#FF7F6C' },
+    // Europe
+    { name: 'London', lat: 51.5074, lng: -0.1278, color: '#C4A7E7' },
+    { name: 'Paris', lat: 48.8566, lng: 2.3522, color: '#FFEB3B' },
+    { name: 'Berlin', lat: 52.5200, lng: 13.4050, color: '#FF90B3' },
+    // Asia & Middle East
+    { name: 'Tokyo', lat: 35.6762, lng: 139.6503, color: '#FF90B3' },
+    { name: 'Dubai', lat: 25.2048, lng: 55.2708, color: '#FF7F6C' },
+    { name: 'Singapore', lat: 1.3521, lng: 103.8198, color: '#A0E8AF' },
+    { name: 'Karachi', lat: 24.8607, lng: 67.0011, color: '#CCFF00' },
+    { name: 'Lahore', lat: 31.5204, lng: 74.3587, color: '#C4A7E7' },
+    { name: 'Mumbai', lat: 19.0760, lng: 72.8777, color: '#FFEB3B' },
+    { name: 'Delhi', lat: 28.7041, lng: 77.1025, color: '#FF90B3' },
+    { name: 'Bangkok', lat: 13.7563, lng: 100.5018, color: '#CCFF00' },
+    { name: 'Hong Kong', lat: 22.3193, lng: 114.1694, color: '#FF7F6C' },
+    { name: 'Seoul', lat: 37.5665, lng: 126.9780, color: '#A0E8AF' },
+    // Oceania & Africa
+    { name: 'Sydney', lat: -33.8688, lng: 151.2093, color: '#CCFF00' },
+    { name: 'Melbourne', lat: -37.8136, lng: 144.9631, color: '#C4A7E7' },
+    { name: 'Cairo', lat: 30.0444, lng: 31.2357, color: '#FFEB3B' },
+    { name: 'Lagos', lat: 6.5244, lng: 3.3792, color: '#FF90B3' },
 ];
 
 // Convert hex color to RGB array
