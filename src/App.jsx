@@ -5,6 +5,7 @@ import { FriendsList } from './components/FriendsList';
 import { Auth } from './components/Auth';
 import { ContactSync } from './components/ContactSync';
 import { InviteFriends } from './components/InviteFriends';
+import { GroupInviteModal } from './components/GroupInviteModal';
 import { Settings } from './components/Settings';
 import { PrivacyPolicy } from './components/PrivacyPolicy';
 import { Terms } from './components/Terms';
@@ -30,6 +31,7 @@ function App() {
   const [selectedCity, setSelectedCity] = useState(null);
   const [showContactSync, setShowContactSync] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showGroupInvite, setShowGroupInvite] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
@@ -430,6 +432,14 @@ function App() {
         </div>
       )}
 
+      {/* Group Invite Modal */}
+      {showGroupInvite && (
+        <GroupInviteModal
+          onClose={() => setShowGroupInvite(false)}
+          onSuccess={() => loadFriends()}
+        />
+      )}
+
       {/* Viral Loop Prompt */}
       {showViralPrompt && (
         <ViralLoopPrompt
@@ -473,6 +483,7 @@ function App() {
             onSelectCity={setSelectedCity}
             onSelectFriend={(friend) => console.log('Selected:', friend)}
             onInvite={() => setShowInvite(true)}
+            onGroupInvite={() => setShowGroupInvite(true)}
             onToggleGhostMode={() => setGhostMode(!ghostMode)}
             onToggleNotifications={() => setNotificationsMuted(!notificationsMuted)}
             onUpdateLocation={handleUpdateLocation}

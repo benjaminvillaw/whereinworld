@@ -8,12 +8,14 @@ export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, o
     const [editingName, setEditingName] = useState(false);
     const [newName, setNewName] = useState(user?.display_name || '');
     const [sentInvites, setSentInvites] = useState([]);
+    const [groupInvites, setGroupInvites] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const fileInputRef = useRef(null);
 
     useEffect(() => {
         loadSentInvites();
+        loadGroupInvites();
     }, []);
 
     const loadSentInvites = async () => {
@@ -22,6 +24,24 @@ export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, o
             setSentInvites(invites || []);
         } catch (e) {
             console.error('Failed to load invites:', e);
+        }
+    };
+
+    const loadGroupInvites = async () => {
+        try {
+            const groups = await api.getMyGroupInvites?.();
+            setGroupInvites(groups || []);
+        } catch (e) {
+            console.error('Failed to load group invites:', e);
+        }
+    };
+
+    const handleToggleGroupActive = async (groupId, currentActive) => {
+        try {
+            await api.updateGroupInvite(groupId, { isActive: !currentActive });
+            loadGroupInvites(); // Refresh list
+        } catch (e) {
+            console.error('Failed to toggle group:', e);
         }
     };
 
@@ -219,6 +239,52 @@ export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, o
                                             <span className="invite-date">
                                                 {new Date(invite.created_at).toLocaleDateString()}
                                             </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </section>
+
+                        {/* Group Invites Section */}
+                        <section className="settings-card">
+                            <div className="settings-card-header">
+                                <span className="material-symbols-outlined settings-card-icon" style={{ color: '#8b5cf6' }}>groups</span>
+                                <h3 className="settings-card-title">Group Links</h3>
+                            </div>
+
+                            {groupInvites.length === 0 ? (
+                                <p className="invites-empty">No group links created yet</p>
+                            ) : (
+                                <div className="invites-list">
+                                    {groupInvites.map((group) => (
+                                        <div key={group.id} className="invite-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.5rem' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div className="invite-info">
+                                                    <span className="invite-phone" style={{ fontWeight: 600 }}>{group.name || `Group ${group.code}`}</span>
+                                                    <span className={`invite-status ${group.is_active ? 'pending' : 'accepted'}`}>
+                                                        {group.is_active ? 'Active' : 'Inactive'}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleToggleGroupActive(group.id, group.is_active)}
+                                                    style={{
+                                                        background: group.is_active ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                                        color: group.is_active ? '#ef4444' : '#10b981',
+                                                        border: 'none',
+                                                        padding: '0.375rem 0.75rem',
+                                                        borderRadius: '0.5rem',
+                                                        fontSize: '0.75rem',
+                                                        fontWeight: 600,
+                                                        cursor: 'pointer'
+                                                    }}
+                                                >
+                                                    {group.is_active ? 'Deactivate' : 'Activate'}
+                                                </button>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                                <span>{group.member_count || 1} member{group.member_count !== 1 ? 's' : ''}</span>
+                                                <span>Expires {new Date(group.expires_at).toLocaleDateString()}</span>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

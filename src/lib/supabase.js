@@ -520,6 +520,114 @@ export const api = {
             return data.invites || [];
         }
         return [];
+    },
+
+    // ============================================
+    // GROUP INVITE API METHODS
+    // ============================================
+
+    async createGroupInvite({ name, maxMembers = 50, expiresInDays = 7 } = {}) {
+        if (hasBackend) {
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/invite/create-group`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ name, maxMembers, expiresInDays })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to create group invite');
+            return data;
+        }
+        // Demo mode
+        const code = 'G' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        return {
+            success: true,
+            group: {
+                code,
+                url: `${window.location.origin}/join/${code}`,
+                name,
+                maxMembers,
+                memberCount: 1,
+                expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
+            }
+        };
+    },
+
+    async lookupGroupInvite(code) {
+        const res = await fetch(`${API_URL}/api/invite/lookup-group?code=${code}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Invalid group invite');
+        return data;
+    },
+
+    async acceptGroupInvite(code) {
+        if (hasBackend) {
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/invite/accept-group`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ code })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to join group');
+            return data;
+        }
+        return { success: true, newFriendsCount: 0 };
+    },
+
+    async getMyGroupInvites() {
+        if (hasBackend) {
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/invite/my-group-invites`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to get group invites');
+            return data.groups || [];
+        }
+        return [];
+    },
+
+    async updateGroupInvite(groupId, { isActive }) {
+        if (hasBackend) {
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/invite/update-group`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ groupId, isActive })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to update group');
+            return data;
+        }
+        return { success: true };
+    },
+
+    async deleteFriendship(friendId) {
+        if (hasBackend) {
+            const token = localStorage.getItem(SESSION_TOKEN_KEY);
+            const res = await fetch(`${API_URL}/api/invite/delete-friendship`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ friendId })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to remove friend');
+            return data;
+        }
+        return { success: true };
     }
 };
 

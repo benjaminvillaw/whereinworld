@@ -12,6 +12,10 @@ export function JoinInvite() {
     const [user, setUser] = useState(null);
     const [accepting, setAccepting] = useState(false);
     const [accepted, setAccepted] = useState(false);
+    const [newFriendsCount, setNewFriendsCount] = useState(0);
+
+    // Detect if this is a group invite (codes starting with 'G')
+    const isGroupInvite = code && code.toUpperCase().startsWith('G');
 
     // Check for existing session
     useEffect(() => {
@@ -26,16 +30,17 @@ export function JoinInvite() {
             return;
         }
 
-        api.lookupInvite(code)
+        const lookupFn = isGroupInvite ? api.lookupGroupInvite : api.lookupInvite;
+        lookupFn(code)
             .then(data => {
-                setInvite(data.invite);
+                setInvite(isGroupInvite ? data.group : data.invite);
                 setLoading(false);
             })
             .catch(err => {
                 setError(err.message || 'Invalid invite code');
                 setLoading(false);
             });
-    }, [code]);
+    }, [code, isGroupInvite]);
 
     const handleAuthenticated = async (authUser) => {
         setUser(authUser);
@@ -48,7 +53,12 @@ export function JoinInvite() {
 
         setAccepting(true);
         try {
-            await api.acceptInvite(code);
+            if (isGroupInvite) {
+                const result = await api.acceptGroupInvite(code);
+                setNewFriendsCount(result.newFriendsCount || 0);
+            } else {
+                await api.acceptInvite(code);
+            }
             setAccepted(true);
             // Redirect to main app after short delay
             setTimeout(() => navigate('/'), 2000);
@@ -99,7 +109,11 @@ export function JoinInvite() {
                 <div className="join-content success">
                     <span className="success-icon">🎉</span>
                     <h1>You're Connected!</h1>
-                    <p>You and {invite?.inviterName || 'your friend'} can now see each other's locations.</p>
+                    {isGroupInvite ? (
+                        <p>You joined {invite?.name || 'the group'} and connected with {newFriendsCount} new {newFriendsCount === 1 ? 'friend' : 'friends'}!</p>
+                    ) : (
+                        <p>You and {invite?.inviterName || 'your friend'} can now see each other's locations.</p>
+                    )}
                     <p className="redirect-text">Redirecting to app...</p>
                 </div>
                 <style>{styles}</style>
@@ -111,10 +125,16 @@ export function JoinInvite() {
     if (!user) {
         return (
             <div className="join-page">
-                <div className="invite-banner">
-                    <p>
-                        <strong>{invite?.inviterName || 'A friend'}</strong> invited you to see where each other are!
-                    </p>
+                <div className="invite-banner" style={isGroupInvite ? { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' } : {}}>
+                    {isGroupInvite ? (
+                        <p>
+                            <strong>👥 Join {invite?.name || 'Group'}</strong> — {invite?.memberCount || 1} member{invite?.memberCount !== 1 ? 's' : ''} so far
+                        </p>
+                    ) : (
+                        <p>
+                            <strong>{invite?.inviterName || 'A friend'}</strong> invited you to see where each other are!
+                        </p>
+                    )}
                 </div>
                 <Auth
                     onAuthenticated={handleAuthenticated}
@@ -129,19 +149,33 @@ export function JoinInvite() {
     return (
         <div className="join-page">
             <div className="join-content">
-                <h1>📍 Join Invite</h1>
-                <p className="invite-message">
-                    <strong>{invite?.inviterName || 'A friend'}</strong> wants to connect with you on Where In World!
-                </p>
-                <p className="invite-description">
-                    Once connected, you'll be able to see each other's cities.
-                </p>
+                <h1>{isGroupInvite ? '👥 Join Group' : '📍 Join Invite'}</h1>
+                {isGroupInvite ? (
+                    <>
+                        <p className="invite-message">
+                            Join <strong>{invite?.name || 'this group'}</strong> on Where In World!
+                        </p>
+                        <p className="invite-description">
+                            {invite?.memberCount || 1} member{invite?.memberCount !== 1 ? 's' : ''} have joined. Everyone in this group will be able to see each other's cities.
+                        </p>
+                    </>
+                ) : (
+                    <>
+                        <p className="invite-message">
+                            <strong>{invite?.inviterName || 'A friend'}</strong> wants to connect with you on Where In World!
+                        </p>
+                        <p className="invite-description">
+                            Once connected, you'll be able to see each other's cities.
+                        </p>
+                    </>
+                )}
                 <button
                     className="btn btn-primary accept-btn"
                     onClick={() => handleAcceptInvite()}
                     disabled={accepting}
+                    style={isGroupInvite ? { background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)' } : {}}
                 >
-                    {accepting ? 'Accepting...' : '✓ Accept Invite'}
+                    {accepting ? 'Joining...' : isGroupInvite ? '✓ Join Group' : '✓ Accept Invite'}
                 </button>
                 <button
                     className="btn btn-secondary"

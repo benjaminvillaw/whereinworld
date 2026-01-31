@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { api } from '../lib/supabase';
 
 // Calculate friend's cities and countries stats
 function calculateStats(friend, allFriends = []) {
@@ -9,9 +10,25 @@ function calculateStats(friend, allFriends = []) {
     return { cities, countries };
 }
 
-export function FriendProfilePopup({ friend, onClose }) {
+export function FriendProfilePopup({ friend, onClose, onRemoveFriend }) {
     const [visible, setVisible] = useState(false);
+    const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+    const [removing, setRemoving] = useState(false);
     const stats = calculateStats(friend);
+
+    const handleRemoveFriend = async () => {
+        setRemoving(true);
+        try {
+            await api.deleteFriendship(friend.id);
+            if (onRemoveFriend) onRemoveFriend(friend.id);
+            handleClose();
+        } catch (e) {
+            console.error('Failed to remove friend:', e);
+            setShowRemoveConfirm(false);
+        } finally {
+            setRemoving(false);
+        }
+    };
 
     useEffect(() => {
         // Trigger animation on mount
@@ -102,6 +119,36 @@ export function FriendProfilePopup({ friend, onClose }) {
                     <span className="material-symbols-outlined">chat</span>
                     Send Message
                 </a>
+
+                {/* Remove Friend */}
+                {showRemoveConfirm ? (
+                    <div className="friend-remove-confirm">
+                        <p>Remove {displayName} from your friends?</p>
+                        <div className="friend-remove-actions">
+                            <button
+                                className="friend-remove-btn-confirm"
+                                onClick={handleRemoveFriend}
+                                disabled={removing}
+                            >
+                                {removing ? 'Removing...' : 'Yes, Remove'}
+                            </button>
+                            <button
+                                className="friend-remove-btn-cancel"
+                                onClick={() => setShowRemoveConfirm(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <button
+                        className="friend-remove-btn"
+                        onClick={() => setShowRemoveConfirm(true)}
+                    >
+                        <span className="material-symbols-outlined">person_remove</span>
+                        Remove Friend
+                    </button>
+                )}
             </div>
 
             <style>{`
@@ -394,6 +441,83 @@ export function FriendProfilePopup({ friend, onClose }) {
 
                 .friend-popup-message-btn .material-symbols-outlined {
                     font-size: 1.25rem;
+                }
+
+                .friend-remove-btn {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                    width: 100%;
+                    margin-top: 0.75rem;
+                    padding: 0.75rem;
+                    background: transparent;
+                    color: rgba(239, 68, 68, 0.8);
+                    font-weight: 600;
+                    font-size: 0.875rem;
+                    border: 1px solid rgba(239, 68, 68, 0.3);
+                    border-radius: 0.75rem;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .friend-remove-btn:hover {
+                    background: rgba(239, 68, 68, 0.1);
+                    color: #ef4444;
+                    border-color: rgba(239, 68, 68, 0.5);
+                }
+
+                .friend-remove-btn .material-symbols-outlined {
+                    font-size: 1.125rem;
+                }
+
+                .friend-remove-confirm {
+                    margin-top: 0.75rem;
+                    padding: 1rem;
+                    background: rgba(239, 68, 68, 0.1);
+                    border: 1px solid rgba(239, 68, 68, 0.3);
+                    border-radius: 0.75rem;
+                    text-align: center;
+                }
+
+                .friend-remove-confirm p {
+                    color: rgba(255, 255, 255, 0.8);
+                    font-size: 0.875rem;
+                    margin: 0 0 0.75rem;
+                }
+
+                .friend-remove-actions {
+                    display: flex;
+                    gap: 0.5rem;
+                }
+
+                .friend-remove-btn-confirm {
+                    flex: 1;
+                    padding: 0.625rem;
+                    background: #ef4444;
+                    color: white;
+                    font-weight: 600;
+                    font-size: 0.8125rem;
+                    border: none;
+                    border-radius: 0.5rem;
+                    cursor: pointer;
+                }
+
+                .friend-remove-btn-confirm:disabled {
+                    opacity: 0.6;
+                    cursor: not-allowed;
+                }
+
+                .friend-remove-btn-cancel {
+                    flex: 1;
+                    padding: 0.625rem;
+                    background: rgba(255, 255, 255, 0.1);
+                    color: rgba(255, 255, 255, 0.8);
+                    font-weight: 600;
+                    font-size: 0.8125rem;
+                    border: none;
+                    border-radius: 0.5rem;
+                    cursor: pointer;
                 }
             `}</style>
         </div>

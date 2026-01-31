@@ -540,6 +540,386 @@ export default async function handler(req, res) {
             });
         }
 
+        // ============================================
+        // CREATE GROUP INVITE - Generate shareable group link
+        // ============================================
+        if (action === 'create-group' && req.method === 'POST') {
+            const user = await getSessionUser(token);
+            if (!user) {
+                return res.status(401).json({ error: 'Not authenticated' });
+            }
+
+            const { name, maxMembers = 50, expiresInDays = 7 } = req.body;
+
+            // Test account bypass
+            if (TEST_MODE_ENABLED && user.id === 'test-user-001') {
+                const code = 'G' + generateInviteCode();
+                const inviteUrl = `${getBaseUrl(req)}/join/${code}`;
+                return res.status(200).json({
+                    success: true,
+                    group: {
+                        code,
+                        url: inviteUrl,
+                        name: name || null,
+                        maxMembers,
+                        expiresAt: new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
+                    }
+                });
+            }
+
+            if (!supabase) {
+                return res.status(500).json({ error: 'Database not configured' });
+            }
+
+            // Generate unique code with G prefix for group
+            const code = 'G' + generateInviteCode();
+            const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000);
+
+            const { data: group, error } = await supabase
+                .from('group_invites')
+                .insert({
+                    user_id: user.id,
+                    code,
+                    name: name || null,
+                    max_members: Math.min(maxMembers, 100), // Cap at 100
+                    expires_at: expiresAt.toISOString(),
+                    is_active: true
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Add creator as first member
+            await supabase
+                .from('group_invite_members')
+                .insert({
+                    group_invite_id: group.id,
+                    user_id: user.id
+                });
+
+            const inviteUrl = `${getBaseUrl(req)}/join/${group.code}`;
+            return res.status(200).json({
+                success: true,
+                group: {
+                    id: group.id,
+                    code: group.code,
+                    url: inviteUrl,
+                    name: group.name,
+                    maxMembers: group.max_members,
+                    memberCount: 1,
+                    expiresAt: group.expires_at,
+                    createdAt: group.created_at
+                }
+            });
+        }
+
+        // ============================================
+        // LOOKUP GROUP - Look up group invite for join page
+        // ============================================
+        if (action === 'lookup-group' && req.method === 'GET') {
+            const { code } = req.query;
+
+            // Validate invite code
+            const codeValidation = validateInviteCode(code);
+            if (!codeValidation.valid) {
+                return res.status(400).json({ error: codeValidation.error });
+            }
+
+            if (!supabase) {
+                return res.status(200).json({
+                    success: true,
+                    group: {
+                        code: codeValidation.cleaned,
+                        creatorName: 'Demo User',
+                        memberCount: 0,
+                        maxMembers: 50,
+                        valid: true
+                    }
+                });
+            }
+
+            const { data: group } = await supabase
+                .from('group_invites')
+                .select('*, users!group_invites_user_id_fkey(display_name)')
+                .eq('code', codeValidation.cleaned)
+                .eq('is_active', true)
+                .single();
+
+            if (!group) {
+                return res.status(404).json({ error: 'Group invite not found or inactive' });
+            }
+
+            // Check expiration
+            if (group.expires_at && new Date(group.expires_at) < new Date()) {
+                return res.status(410).json({ error: 'Group invite has expired' });
+            }
+
+            // Get member count
+            const { count } = await supabase
+                .from('group_invite_members')
+                .select('*', { count: 'exact', head: true })
+                .eq('group_invite_id', group.id);
+
+            // Check if full
+            if (count >= group.max_members) {
+                return res.status(410).json({ error: 'Group is full' });
+            }
+
+            return res.status(200).json({
+                success: true,
+                group: {
+                    code: group.code,
+                    name: group.name,
+                    creatorName: group.users?.display_name || 'A friend',
+                    memberCount: count || 0,
+                    maxMembers: group.max_members,
+                    valid: true
+                }
+            });
+        }
+
+        // ============================================
+        // ACCEPT GROUP - Join group and connect to all members
+        // ============================================
+        if (action === 'accept-group' && req.method === 'POST') {
+            const user = await getSessionUser(token);
+            if (!user) {
+                return res.status(401).json({ error: 'Not authenticated' });
+            }
+
+            const { code } = req.body;
+
+            // Validate invite code
+            const codeValidation = validateInviteCode(code);
+            if (!codeValidation.valid) {
+                return res.status(400).json({ error: codeValidation.error });
+            }
+
+            // Test account bypass
+            if (TEST_MODE_ENABLED && user.id === 'test-user-001') {
+                return res.status(200).json({
+                    success: true,
+                    testMode: true,
+                    message: 'Joined group',
+                    newFriendsCount: 0
+                });
+            }
+
+            if (!supabase) {
+                return res.status(500).json({ error: 'Database not configured' });
+            }
+
+            // Find the group
+            const { data: group } = await supabase
+                .from('group_invites')
+                .select('*')
+                .eq('code', codeValidation.cleaned)
+                .eq('is_active', true)
+                .single();
+
+            if (!group) {
+                return res.status(404).json({ error: 'Group invite not found or inactive' });
+            }
+
+            // Check expiration
+            if (group.expires_at && new Date(group.expires_at) < new Date()) {
+                return res.status(410).json({ error: 'Group invite has expired' });
+            }
+
+            // Check if already a member
+            const { data: existingMember } = await supabase
+                .from('group_invite_members')
+                .select('id')
+                .eq('group_invite_id', group.id)
+                .eq('user_id', user.id)
+                .single();
+
+            if (existingMember) {
+                return res.status(400).json({ error: 'You are already a member of this group' });
+            }
+
+            // Get all current members
+            const { data: members } = await supabase
+                .from('group_invite_members')
+                .select('user_id')
+                .eq('group_invite_id', group.id);
+
+            // Check if full
+            if (members && members.length >= group.max_members) {
+                return res.status(410).json({ error: 'Group is full' });
+            }
+
+            // Add joiner as member
+            await supabase
+                .from('group_invite_members')
+                .insert({
+                    group_invite_id: group.id,
+                    user_id: user.id
+                });
+
+            // Create friendships with all existing members
+            let newFriendsCount = 0;
+            if (members && members.length > 0) {
+                for (const member of members) {
+                    const [userA, userB] = [member.user_id, user.id].sort();
+
+                    const { error: friendshipError } = await supabase
+                        .from('friendships')
+                        .insert({
+                            user_a: userA,
+                            user_b: userB,
+                            group_invite_id: group.id
+                        });
+
+                    // Ignore duplicate key error (already friends)
+                    if (!friendshipError || friendshipError.message.includes('duplicate')) {
+                        if (!friendshipError) newFriendsCount++;
+                    }
+                }
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: 'Joined group',
+                groupName: group.name,
+                newFriendsCount
+            });
+        }
+
+        // ============================================
+        // MY GROUP INVITES - List user's created group invites
+        // ============================================
+        if (action === 'my-group-invites' && req.method === 'GET') {
+            const user = await getSessionUser(token);
+            if (!user) {
+                return res.status(401).json({ error: 'Not authenticated' });
+            }
+
+            // Test account bypass
+            if (TEST_MODE_ENABLED && user.id === 'test-user-001') {
+                return res.status(200).json({
+                    success: true,
+                    groups: []
+                });
+            }
+
+            if (!supabase) {
+                return res.status(500).json({ error: 'Database not configured' });
+            }
+
+            const { data: groups } = await supabase
+                .from('group_invites')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            // Get member counts for each group
+            const groupsWithCounts = await Promise.all((groups || []).map(async (group) => {
+                const { count } = await supabase
+                    .from('group_invite_members')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('group_invite_id', group.id);
+
+                return {
+                    id: group.id,
+                    code: group.code,
+                    name: group.name,
+                    memberCount: count || 0,
+                    maxMembers: group.max_members,
+                    expiresAt: group.expires_at,
+                    isActive: group.is_active,
+                    createdAt: group.created_at
+                };
+            }));
+
+            return res.status(200).json({
+                success: true,
+                groups: groupsWithCounts
+            });
+        }
+
+        // ============================================
+        // UPDATE GROUP - Toggle active/inactive
+        // ============================================
+        if (action === 'update-group' && req.method === 'POST') {
+            const user = await getSessionUser(token);
+            if (!user) {
+                return res.status(401).json({ error: 'Not authenticated' });
+            }
+
+            const { groupId, isActive } = req.body;
+
+            if (!groupId) {
+                return res.status(400).json({ error: 'groupId is required' });
+            }
+
+            if (!supabase) {
+                return res.status(500).json({ error: 'Database not configured' });
+            }
+
+            // Verify ownership
+            const { data: group } = await supabase
+                .from('group_invites')
+                .select('id')
+                .eq('id', groupId)
+                .eq('user_id', user.id)
+                .single();
+
+            if (!group) {
+                return res.status(404).json({ error: 'Group not found or you are not the owner' });
+            }
+
+            // Update
+            const { error } = await supabase
+                .from('group_invites')
+                .update({ is_active: isActive !== false })
+                .eq('id', groupId);
+
+            if (error) throw error;
+
+            return res.status(200).json({
+                success: true,
+                message: isActive !== false ? 'Group reactivated' : 'Group deactivated'
+            });
+        }
+
+        // ============================================
+        // DELETE FRIENDSHIP - Remove a friend connection
+        // ============================================
+        if (action === 'delete-friendship' && req.method === 'POST') {
+            const user = await getSessionUser(token);
+            if (!user) {
+                return res.status(401).json({ error: 'Not authenticated' });
+            }
+
+            const { friendId } = req.body;
+
+            if (!friendId) {
+                return res.status(400).json({ error: 'friendId is required' });
+            }
+
+            if (!supabase) {
+                return res.status(500).json({ error: 'Database not configured' });
+            }
+
+            // Delete friendship (check both directions since user_a/user_b are sorted)
+            const [userA, userB] = [user.id, friendId].sort();
+
+            const { error } = await supabase
+                .from('friendships')
+                .delete()
+                .eq('user_a', userA)
+                .eq('user_b', userB);
+
+            if (error) throw error;
+
+            return res.status(200).json({
+                success: true,
+                message: 'Friend removed'
+            });
+        }
+
         return res.status(404).json({ error: 'Not found' });
 
     } catch (error) {

@@ -222,7 +222,7 @@ function getNearestCity(lat, lng) {
     return { ...nearest, distance: Math.round(minDistance) };
 }
 
-export function CityList({ friends = [], userLocation, user, onSelectCity, onSelectFriend, onInvite, onToggleGhostMode, onUpdateLocation, onRequestLocation, onMapView, onShowFriends, onSettings, ghostMode = false, notificationsMuted = false, onToggleNotifications, onRefresh, refreshing = false, onGoToUserLocation }) {
+export function CityList({ friends = [], userLocation, user, onSelectCity, onSelectFriend, onInvite, onGroupInvite, onToggleGhostMode, onUpdateLocation, onRequestLocation, onMapView, onShowFriends, onSettings, ghostMode = false, notificationsMuted = false, onToggleNotifications, onRefresh, refreshing = false, onGoToUserLocation }) {
     // Pull-to-refresh state
     const [pullDistance, setPullDistance] = useState(0);
     const [isPulling, setIsPulling] = useState(false);
@@ -507,33 +507,58 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                     </button>
                 </div>
 
-                {/* Bottom row: Centered Add Friend button */}
-                <div className="flex items-center justify-center">
+                {/* Bottom row: Add Individual & Add Groups buttons */}
+                <div className="flex items-center justify-center gap-3">
                     {onInvite && (
                         <button
                             className="btn-hard"
                             style={{
                                 height: '2.5rem',
-                                padding: '0 3rem',
-                                minWidth: '12rem',
+                                padding: '0 1.5rem',
                                 background: 'var(--accent-lime)',
                                 color: 'black',
-                                fontSize: '0.8125rem',
+                                fontSize: '0.75rem',
                                 fontWeight: 800,
                                 textTransform: 'uppercase',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '0.5rem',
+                                gap: '0.375rem',
                                 borderRadius: '2rem',
                                 border: '2px solid black',
                                 cursor: 'pointer',
                                 transition: 'transform 0.2s, box-shadow 0.2s'
                             }}
                             onClick={onInvite}
-                            title="Invite Friends"
+                            title="Invite Individual"
                         >
-                            <span className="material-symbols-outlined" style={{ fontSize: '1.125rem' }}>person_add</span>
-                            Add Friends
+                            <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>person_add</span>
+                            Individual
+                        </button>
+                    )}
+                    {onGroupInvite && (
+                        <button
+                            className="btn-hard"
+                            style={{
+                                height: '2.5rem',
+                                padding: '0 1.5rem',
+                                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                                color: 'white',
+                                fontSize: '0.75rem',
+                                fontWeight: 800,
+                                textTransform: 'uppercase',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                borderRadius: '2rem',
+                                border: '2px solid rgba(0,0,0,0.3)',
+                                cursor: 'pointer',
+                                transition: 'transform 0.2s, box-shadow 0.2s'
+                            }}
+                            onClick={onGroupInvite}
+                            title="Create Group Invite"
+                        >
+                            <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>groups</span>
+                            Group
                         </button>
                     )}
                 </div>
