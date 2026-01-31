@@ -13,6 +13,9 @@ import { LocationPermissionModal } from './components/LocationPermissionModal';
 import { ArrivalNotification } from './components/ArrivalNotification';
 import { FriendJoinedNotification, useNewFriendNotifications } from './components/FriendJoinedNotification';
 import { EngagementBanners } from './components/EngagementBanners';
+import { LocationOnboarding } from './components/LocationOnboarding';
+import { LocationDeniedBanner } from './components/LocationDeniedBanner';
+import { ViralLoopPrompt } from './components/ViralLoopPrompt';
 import { updateStreak } from './lib/streak';
 import { useLocation } from './hooks/useLocation';
 import { useVisibilityUpdate } from './hooks/useVisibilityUpdate';
@@ -37,6 +40,11 @@ function App() {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [shouldCenterOnUser, setShouldCenterOnUser] = useState(false);
 
+  // Onboarding and viral loop state
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showViralPrompt, setShowViralPrompt] = useState(false);
+  const clickCountRef = useRef(0);
+
   // Track previous friend locations to detect changes
   const prevFriendLocations = useRef({});
 
@@ -54,6 +62,30 @@ function App() {
       }
     }
   }, [user, loading, permission, locationError, location]);
+
+  // Check if user needs to see onboarding (first time users)
+  useEffect(() => {
+    if (user && !loading && permission === 'prompt') {
+      const hasSeenOnboarding = localStorage.getItem('whereinworld_onboarding_seen');
+      if (!hasSeenOnboarding) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [user, loading, permission]);
+
+  // Track clicks for viral loop prompt
+  const trackClick = useCallback(() => {
+    // Don't show if permanently dismissed (shared/copied) OR dismissed this session
+    const viralPromptShown = localStorage.getItem('viralPromptShown');
+    const viralPromptDismissed = sessionStorage.getItem('viralPromptDismissed');
+    if (viralPromptShown || viralPromptDismissed) return;
+
+    clickCountRef.current += 1;
+    // Show viral prompt after 5 meaningful clicks
+    if (clickCountRef.current >= 5) {
+      setShowViralPrompt(true);
+    }
+  }, []);
 
   // Load friends data and detect arrivals
   const loadFriends = useCallback(async () => {
@@ -140,6 +172,14 @@ function App() {
   const handleAuthenticated = async (authUser) => {
     setUser(authUser);
 
+    // Check if this is a new user who needs onboarding
+    const hasSeenOnboarding = localStorage.getItem('whereinworld_onboarding_seen');
+    if (!hasSeenOnboarding && permission === 'prompt') {
+      setShowOnboarding(true);
+      loadFriends();
+      return; // Don't request location yet - let onboarding handle it
+    }
+
     // Request location after login
     const loc = await requestLocation();
     if (loc) {
@@ -147,14 +187,18 @@ function App() {
       updateStreak();
     }
 
-    // Show contact sync prompt for new users
-    // DISABLED: Contact sync doesn't work on web - needs native app integration
-    // const contacts = await api.getContacts();
-    // if (contacts.length === 0) {
-    //   setShowContactSync(true);
-    // }
-
     loadFriends();
+  };
+
+  // Handle onboarding location request
+  const handleOnboardingLocation = async () => {
+    localStorage.setItem('whereinworld_onboarding_seen', 'true');
+    const loc = await requestLocation();
+    if (loc) {
+      await api.updateLocation(loc);
+      updateStreak();
+    }
+    setShowOnboarding(false);
   };
 
   // Handle contact sync
@@ -279,6 +323,11 @@ function App() {
     return <Auth onAuthenticated={handleAuthenticated} />;
   }
 
+  // Location onboarding for first-time users
+  if (showOnboarding) {
+    return <LocationOnboarding onRequestLocation={handleOnboardingLocation} />;
+  }
+
   // Contact sync modal
   if (showContactSync) {
     return (
@@ -321,6 +370,11 @@ function App() {
           setShowSettings(false);
           setShowTerms(true);
         }}
+        friends={friends}
+        onInvite={() => {
+          setShowSettings(false);
+          setShowInvite(true);
+        }}
       />
     );
   }
@@ -360,7 +414,7 @@ function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" onClick={trackClick}>
       {/* Invite Modal */}
       {showInvite && (
         <div className="modal-overlay" onClick={() => setShowInvite(false)}>
@@ -371,6 +425,19 @@ function App() {
             />
           </div>
         </div>
+      )}
+
+      {/* Viral Loop Prompt */}
+      {showViralPrompt && (
+        <ViralLoopPrompt
+          inviteLink={`${window.location.origin}?invite=${user?.id}`}
+          onClose={() => setShowViralPrompt(false)}
+        />
+      )}
+
+      {/* Location Denied Banner (shown at top of app when location blocked) */}
+      {permission === 'denied' && (
+        <LocationDeniedBanner onRetry={requestLocation} />
       )}
 
       {/* Main Content */}

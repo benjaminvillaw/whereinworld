@@ -498,7 +498,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                         }}
                         title={notificationsMuted ? 'Unmute Notifications' : 'Mute Notifications'}
                     >
-                        <span className="material-symbols-outlined filled" style={{
+                        <span className="material-symbols-outlined filled animate-bell-jiggle" style={{
                             fontSize: '1.5rem',
                             color: '#ef4444'
                         }}>
@@ -552,16 +552,19 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                         onClick={ghostMode ? undefined : (userLocation ? onUpdateLocation : onRequestLocation)}
                     >
                         <div className="flex items-center gap-3">
-                            <div style={{
-                                width: '2.5rem',
-                                height: '2.5rem',
-                                background: ghostMode ? 'transparent' : 'black',
-                                color: ghostMode ? 'white' : 'var(--accent-lime)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                border: ghostMode ? 'none' : '2px solid black'
-                            }}>
+                            <div
+                                className={userLocation && !ghostMode ? 'animate-location-pulse' : ''}
+                                style={{
+                                    width: '2.5rem',
+                                    height: '2.5rem',
+                                    borderRadius: '50%',
+                                    background: ghostMode ? 'transparent' : 'black',
+                                    color: ghostMode ? 'white' : 'var(--accent-lime)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    border: ghostMode ? 'none' : '2px solid black'
+                                }}>
                                 {ghostMode ? (
                                     <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M50 10C30 10 20 30 20 50C20 70 25 90 30 90C35 90 35 80 40 80C45 80 45 90 50 90C55 90 55 80 60 80C65 80 65 90 70 90C75 90 80 70 80 50C80 30 70 10 50 10Z" stroke="white" strokeWidth="3" fill="none" />
@@ -613,6 +616,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                 height: '2rem',
                                 background: ghostMode ? 'var(--accent-lime)' : 'white',
                                 border: '2px solid black',
+                                borderRadius: '1rem',
                                 position: 'relative',
                                 transition: 'background 0.2s'
                             }}>
@@ -623,6 +627,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                                     width: '1.25rem',
                                     height: '1.25rem',
                                     background: 'black',
+                                    borderRadius: '50%',
                                     transition: 'left 0.2s'
                                 }}></div>
                             </div>
@@ -682,7 +687,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                         return (
                             <div
                                 key={`${cityData.city}-${cityData.country}`}
-                                className="city-card"
+                                className="city-card animate-stagger"
                                 onClick={() => onSelectCity?.(cityData)}
                                 style={{ borderRadius: '1.25rem', overflow: 'hidden' }}
                             >

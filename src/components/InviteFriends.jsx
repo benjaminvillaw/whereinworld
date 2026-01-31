@@ -70,7 +70,22 @@ export function InviteFriends({ onClose, onInviteSent }) {
                 Invite friends to see where each other are in the world!
             </p>
 
-            {/* SMS Invite */}
+            {/* Link Share - Now First */}
+            <div className="link-section">
+                <label className="input-label">Share invite link</label>
+                <button
+                    className="btn btn-secondary copy-link-btn"
+                    onClick={handleCopyLink}
+                >
+                    {copied ? '✓ Copied!' : '📋 Copy Invite Link'}
+                </button>
+            </div>
+
+            <div className="divider">
+                <span>or</span>
+            </div>
+
+            {/* SMS Invite - Now Second */}
             <form onSubmit={handleSendSms} className="invite-form">
                 <label className="input-label">Send via text message</label>
                 <div className="phone-input-group">
@@ -98,20 +113,12 @@ export function InviteFriends({ onClose, onInviteSent }) {
                 )}
             </form>
 
-            <div className="divider">
-                <span>or</span>
-            </div>
-
-            {/* Link Share */}
-            <div className="link-section">
-                <label className="input-label">Share invite link</label>
-                <button
-                    className="btn btn-secondary copy-link-btn"
-                    onClick={handleCopyLink}
-                >
-                    {copied ? '✓ Copied!' : '📋 Copy Invite Link'}
-                </button>
-            </div>
+            {/* Sync Contacts - Coming Soon */}
+            <button className="sync-contacts-btn" disabled>
+                <span className="material-symbols-outlined">contacts</span>
+                Sync Phone Contacts
+                <span className="coming-soon-tag">Coming Soon</span>
+            </button>
 
             {error && (
                 <div className="error-message">
@@ -259,6 +266,40 @@ export function InviteFriends({ onClose, onInviteSent }) {
                     color: var(--error);
                     border-radius: var(--radius-sm);
                     font-size: 13px;
+                }
+
+                .sync-contacts-btn {
+                    width: 100%;
+                    margin-top: 20px;
+                    padding: 14px 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                    background: var(--bg-tertiary);
+                    border: 1px dashed var(--border-subtle);
+                    border-radius: var(--radius-md);
+                    color: var(--text-muted);
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: not-allowed;
+                    opacity: 0.7;
+                    position: relative;
+                }
+
+                .sync-contacts-btn .material-symbols-outlined {
+                    font-size: 20px;
+                }
+
+                .coming-soon-tag {
+                    font-size: 10px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                    background: var(--bg-secondary);
+                    padding: 3px 8px;
+                    border-radius: 10px;
+                    color: var(--text-secondary);
                 }
             `}</style>
         </div>

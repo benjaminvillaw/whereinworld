@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/supabase';
+import { GlobalBadges } from './FriendProfilePopup';
 
-export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, onLogout, onUserUpdate, onShowPrivacyPolicy, onShowTerms }) {
+export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, onLogout, onUserUpdate, onShowPrivacyPolicy, onShowTerms, onInvite, friends = [] }) {
     const [isGhostMode, setIsGhostMode] = useState(ghostMode);
     const [activeTab, setActiveTab] = useState('profile'); // 'profile' or 'privacy'
     const [editingName, setEditingName] = useState(false);
@@ -154,6 +155,19 @@ export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, o
                                     <p className="profile-phone">{user?.phone || 'No phone'}</p>
                                 </div>
                             </div>
+
+                            {/* Global Stats Badges */}
+                            <div className="profile-badges-section">
+                                <p className="profile-badges-label">Your Global Reach</p>
+                                <GlobalBadges
+                                    cities={(() => { const cities = new Set(); friends.forEach(f => f.location?.city && cities.add(f.location.city.toLowerCase())); return cities.size; })()}
+                                    countries={(() => { const countries = new Set(); friends.forEach(f => f.location?.country && countries.add(f.location.country.toLowerCase())); return countries.size; })()}
+                                    compact={true}
+                                />
+                                <p className="profile-badges-text">
+                                    Friends in <strong>{(() => { const cities = new Set(); friends.forEach(f => f.location?.city && cities.add(f.location.city.toLowerCase())); return cities.size; })()}</strong> cities across <strong>{(() => { const countries = new Set(); friends.forEach(f => f.location?.country && countries.add(f.location.country.toLowerCase())); return countries.size; })()}</strong> countries
+                                </p>
+                            </div>
                         </section>
 
                         {/* Sent Invites */}
@@ -161,6 +175,9 @@ export function Settings({ user, onBack, ghostMode = false, onGhostModeChange, o
                             <div className="settings-card-header">
                                 <span className="material-symbols-outlined settings-card-icon mint">send</span>
                                 <h3 className="settings-card-title">Sent Invites</h3>
+                                <button className="add-friend-btn" onClick={onInvite} title="Add Friend">
+                                    <span className="material-symbols-outlined">person_add</span>
+                                </button>
                             </div>
 
                             {sentInvites.length === 0 ? (

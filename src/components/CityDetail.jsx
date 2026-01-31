@@ -1,4 +1,7 @@
 // City images - curated high quality images for popular cities, with dynamic fallback
+import { useState } from 'react';
+import { FriendProfilePopup } from './FriendProfilePopup';
+
 const CITY_IMAGES = {
     'tokyo': 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80',
     'new york': 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80',
@@ -68,6 +71,10 @@ function isActive(dateString) {
 }
 
 export function CityDetail({ city, onBack }) {
+    const [selectedFriend, setSelectedFriend] = useState(null);
+    const [filter, setFilter] = useState('all'); // 'all', 'active', 'inactive'
+    const [showFilterMenu, setShowFilterMenu] = useState(false);
+
     if (!city) return null;
 
     const { city: cityName, country, friends = [] } = city;
@@ -131,7 +138,7 @@ export function CityDetail({ city, onBack }) {
                             border: '2px solid black',
                             boxShadow: '2px 2px 0 0 rgba(0,0,0,0.5)'
                         }}>
-                            {friends.length} Friend{friends.length !== 1 ? 's' : ''} Active
+                            {friends.length} Friend{friends.length !== 1 ? 's' : ''} To Meet
                         </span>
                     </div>
 
@@ -143,62 +150,133 @@ export function CityDetail({ city, onBack }) {
 
             {/* Friends List */}
             <main className="city-friends-list">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-6" style={{ position: 'relative' }}>
                     <h3 className="text-sm font-black uppercase tracking-wider" style={{ color: 'rgba(0,0,0,0.4)' }}>
-                        Friends Nearby
+                        Friends Nearby {filter !== 'all' && `(${filter})`}
                     </h3>
-                    <span className="material-symbols-outlined" style={{ color: 'rgba(0,0,0,0.3)' }}>
-                        filter_list
-                    </span>
+                    <button
+                        onClick={() => setShowFilterMenu(!showFilterMenu)}
+                        style={{
+                            background: filter !== 'all' ? 'var(--accent-lime)' : 'transparent',
+                            border: filter !== 'all' ? '2px solid black' : 'none',
+                            borderRadius: '0.5rem',
+                            padding: '0.25rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <span className="material-symbols-outlined" style={{ color: filter !== 'all' ? 'black' : 'rgba(0,0,0,0.3)' }}>
+                            filter_list
+                        </span>
+                    </button>
+
+                    {/* Filter Dropdown Menu */}
+                    {showFilterMenu && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '2rem',
+                            right: 0,
+                            background: 'white',
+                            border: '2px solid black',
+                            borderRadius: '0.5rem',
+                            boxShadow: '4px 4px 0 0 rgba(0,0,0,1)',
+                            zIndex: 100,
+                            minWidth: '10rem',
+                            overflow: 'hidden'
+                        }}>
+                            {[
+                                { value: 'all', label: 'All Friends', icon: 'group' },
+                                { value: 'active', label: 'Active Now', icon: 'circle', iconColor: '#22c55e' },
+                                { value: 'inactive', label: 'Inactive', icon: 'circle', iconColor: '#9ca3af' }
+                            ].map((option) => (
+                                <button
+                                    key={option.value}
+                                    onClick={() => { setFilter(option.value); setShowFilterMenu(false); }}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        width: '100%',
+                                        padding: '0.75rem 1rem',
+                                        background: filter === option.value ? 'var(--accent-lime)' : 'white',
+                                        border: 'none',
+                                        borderBottom: '1px solid rgba(0,0,0,0.1)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.875rem',
+                                        fontWeight: filter === option.value ? 700 : 500,
+                                        textAlign: 'left'
+                                    }}
+                                >
+                                    <span className="material-symbols-outlined filled" style={{
+                                        fontSize: '1rem',
+                                        color: option.iconColor || 'black'
+                                    }}>
+                                        {option.icon}
+                                    </span>
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex flex-col gap-4">
-                    {friends.map((friend, index) => {
-                        const avatarColor = AVATAR_COLORS[index % AVATAR_COLORS.length];
-                        const active = isActive(friend.updatedAt || friend.location?.updatedAt);
-                        const locationName = friend.location?.neighborhood || friend.originalCity || cityName;
+                    {friends
+                        .filter((friend) => {
+                            const active = isActive(friend.updatedAt || friend.location?.updatedAt);
+                            if (filter === 'active') return active;
+                            if (filter === 'inactive') return !active;
+                            return true; // 'all'
+                        })
+                        .map((friend, index) => {
+                            const avatarColor = AVATAR_COLORS[index % AVATAR_COLORS.length];
+                            const active = isActive(friend.updatedAt || friend.location?.updatedAt);
+                            const locationName = friend.location?.neighborhood || friend.originalCity || cityName;
 
-                        return (
-                            <div
-                                key={friend.id}
-                                className="friend-item"
-                                style={{ opacity: active ? 1 : 0.8 }}
-                            >
-                                <div className={`friend-item-avatar ${active ? 'avatar-status' : 'avatar-status offline'}`}>
-                                    <div className="avatar avatar-lg" style={{ background: friend.avatar_url ? 'transparent' : avatarColor }}>
-                                        {friend.avatar_url ? (
-                                            <img src={friend.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-                                        ) : (
-                                            friend.displayName?.charAt(0)?.toUpperCase() ||
-                                            friend.display_name?.charAt(0)?.toUpperCase() || '?'
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="friend-item-info">
-                                    <p className="friend-item-name">
-                                        {friend.displayName || friend.display_name || 'Unknown'}
-                                    </p>
-                                    <p className="friend-item-location">
-                                        📍 {locationName} • {timeAgo(friend.updatedAt || friend.location?.updatedAt)}
-                                    </p>
-                                </div>
-
-                                <a
-                                    href={getSmsLink(friend.phone)}
-                                    className="friend-item-action"
-                                    style={{ textDecoration: 'none' }}
+                            return (
+                                <div
+                                    key={friend.id}
+                                    className="friend-item animate-stagger"
+                                    style={{ opacity: active ? 1 : 0.8, cursor: 'pointer' }}
+                                    onClick={() => setSelectedFriend(friend)}
                                 >
-                                    <span className="material-symbols-outlined" style={{
-                                        fontSize: '1.25rem',
-                                        color: 'var(--primary)'
-                                    }}>
-                                        chat
-                                    </span>
-                                </a>
-                            </div>
-                        );
-                    })}
+                                    <div className={`friend-item-avatar ${active ? 'avatar-status' : 'avatar-status offline'}`}>
+                                        <div className="avatar avatar-lg" style={{ background: friend.avatar_url ? 'transparent' : avatarColor }}>
+                                            {friend.avatar_url ? (
+                                                <img src={friend.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                                            ) : (
+                                                friend.displayName?.charAt(0)?.toUpperCase() ||
+                                                friend.display_name?.charAt(0)?.toUpperCase() || '?'
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="friend-item-info">
+                                        <p className="friend-item-name">
+                                            {friend.displayName || friend.display_name || 'Unknown'}
+                                        </p>
+                                        <p className="friend-item-location">
+                                            📍 {locationName} • {timeAgo(friend.updatedAt || friend.location?.updatedAt)}
+                                        </p>
+                                    </div>
+
+                                    <a
+                                        href={getSmsLink(friend.phone)}
+                                        className="friend-item-action"
+                                        style={{ textDecoration: 'none' }}
+                                    >
+                                        <span className="material-symbols-outlined" style={{
+                                            fontSize: '1.25rem',
+                                            color: 'var(--primary)'
+                                        }}>
+                                            chat
+                                        </span>
+                                    </a>
+                                </div>
+                            );
+                        })}
                 </div>
             </main>
 
@@ -345,6 +423,14 @@ export function CityDetail({ city, onBack }) {
                     opacity: 0.2;
                 }
             `}</style>
+
+            {/* Friend Profile Popup */}
+            {selectedFriend && (
+                <FriendProfilePopup
+                    friend={selectedFriend}
+                    onClose={() => setSelectedFriend(null)}
+                />
+            )}
         </div>
     );
 }
