@@ -399,7 +399,26 @@ export const api = {
                 p_user_id: user.id
             });
             if (error) throw error;
-            return data;
+
+            // Transform flat data to include nested location object for MapView compatibility
+            // RPC returns: { id, city, country, lat, lng, ... }
+            // Components expect: { id, ..., location: { city, country, lat, lng } }
+            return (data || []).map(friend => ({
+                ...friend,
+                // Keep flat properties for CityList compatibility
+                city: friend.city,
+                country: friend.country,
+                lat: friend.lat,
+                lng: friend.lng,
+                // Add nested location object for MapView compatibility
+                location: {
+                    city: friend.city,
+                    country: friend.country,
+                    lat: parseFloat(friend.lat),
+                    lng: parseFloat(friend.lng),
+                    updatedAt: friend.location_updated_at
+                }
+            }));
         }
         return localBackend.getFriends(user.id);
     },
