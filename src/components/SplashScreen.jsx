@@ -175,7 +175,7 @@ export function SplashScreen({ onComplete }) {
           border-radius: 50%;
           background: black;
           border: 4px solid white;
-          box-shadow: 0 10px 30px rgba(0. 0, 0, 0.3);
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
           position: relative;
           overflow: hidden;
         }
