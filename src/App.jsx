@@ -136,12 +136,19 @@ function App() {
   // Check for existing session on mount
   useEffect(() => {
     const checkUser = async () => {
-      const currentUser = await api.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-        loadFriends();
+      try {
+        const currentUser = await api.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+          loadFriends();
+        }
+      } catch (err) {
+        // Session check failed (e.g., Safari/incognito cookie restrictions)
+        console.warn('Session check failed:', err);
+      } finally {
+        // Always set loading to false, even if an error occurs
+        setLoading(false);
       }
-      setLoading(false);
     };
     checkUser();
   }, [loadFriends]);
