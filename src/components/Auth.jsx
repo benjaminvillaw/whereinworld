@@ -3,7 +3,11 @@ import { api, isDemoMode } from '../lib/supabase';
 import { SplashScreen } from './SplashScreen';
 
 export function Auth({ onAuthenticated }) {
-  const [step, setStep] = useState('splash'); // 'splash', 'phone', 'otp', 'name', 'avatar'
+  // Skip splash if already shown this session (e.g., after logout)
+  const [step, setStep] = useState(() => {
+    const splashShown = sessionStorage.getItem('wiw_splash_shown');
+    return splashShown ? 'phone' : 'splash';
+  }); // 'splash', 'phone', 'otp', 'name', 'avatar'
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [name, setName] = useState('');
@@ -140,7 +144,10 @@ export function Auth({ onAuthenticated }) {
   return (
     <>
       {step === 'splash' && (
-        <SplashScreen onComplete={() => setStep('phone')} />
+        <SplashScreen onComplete={() => {
+          sessionStorage.setItem('wiw_splash_shown', 'true');
+          setStep('phone');
+        }} />
       )}
       <div className={`auth-container ${step === 'splash' ? 'hidden' : ''}`}>
         <div className="auth-card animate-slide-up">
