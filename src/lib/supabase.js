@@ -401,10 +401,13 @@ export const api = {
             if (error) throw error;
 
             // Transform flat data to include nested location object for MapView compatibility
-            // RPC returns: { id, city, country, lat, lng, ... }
-            // Components expect: { id, ..., location: { city, country, lat, lng } }
+            // RPC returns: { id, display_name, avatar_url, city, country, lat, lng, ... }
+            // Components expect camelCase: { displayName, avatarUrl, location: { city, country, lat, lng } }
             return (data || []).map(friend => ({
                 ...friend,
+                // Add camelCase mappings for component compatibility
+                displayName: friend.display_name,
+                avatarUrl: friend.avatar_url,
                 // Keep flat properties for CityList compatibility
                 city: friend.city,
                 country: friend.country,
