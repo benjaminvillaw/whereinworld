@@ -54,253 +54,324 @@ export function GroupInviteModal({ onClose, onSuccess }) {
     };
 
     return (
-        <div
-            style={{
-                position: 'fixed',
-                inset: 0,
-                background: 'rgba(0,0,0,0.85)',
-                backdropFilter: 'blur(10px)',
-                zIndex: 9999,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '1rem'
-            }}
-            onClick={onClose}
-        >
-            <div
-                style={{
-                    background: 'linear-gradient(145deg, #1a1a2e 0%, #16213e 100%)',
-                    borderRadius: '1.5rem',
-                    padding: '2rem',
-                    width: '100%',
-                    maxWidth: '380px',
-                    border: '1px solid rgba(255,255,255,0.1)'
-                }}
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                    <h2 style={{ color: 'white', fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
-                        {group ? 'Share Group Link' : 'Create Group Link'}
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            background: 'rgba(255,255,255,0.1)',
-                            border: 'none',
-                            borderRadius: '50%',
-                            width: '36px',
-                            height: '36px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <span className="material-icons" style={{ color: 'white', fontSize: '20px' }}>close</span>
-                    </button>
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal-content group-invite-modal" onClick={e => e.stopPropagation()}>
+                <div className="invite-modal">
+                    <div className="invite-header">
+                        <h2>{group ? 'Share Group Link' : 'Create Group Link'}</h2>
+                        <button className="close-btn" onClick={onClose}>✕</button>
+                    </div>
+
+                    {!group ? (
+                        <>
+                            <p className="invite-description">
+                                Everyone who joins this link will be connected to each other — not just to you.
+                            </p>
+
+                            {/* Group Name Input */}
+                            <div className="link-section">
+                                <label className="input-label">Group Name (optional)</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g., Book Club, Work Team"
+                                    value={groupName}
+                                    onChange={e => setGroupName(e.target.value)}
+                                    className="group-name-input"
+                                />
+                            </div>
+
+                            {/* Info Box */}
+                            <div className="info-box">
+                                <span className="material-symbols-outlined info-icon">info</span>
+                                <div>
+                                    <p className="info-text">Link expires in <strong>7 days</strong></p>
+                                    <p className="info-subtext">Maximum 50 members per group</p>
+                                </div>
+                            </div>
+
+                            {error && (
+                                <div className="error-message">{error}</div>
+                            )}
+
+                            {/* Create Button */}
+                            <button
+                                className="btn btn-primary create-btn"
+                                onClick={handleCreate}
+                                disabled={loading}
+                            >
+                                {loading ? 'Creating...' : (
+                                    <>
+                                        <span className="material-symbols-outlined">link</span>
+                                        Create Group Link
+                                    </>
+                                )}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            {/* Success State */}
+                            <div className="success-box">
+                                <span className="material-symbols-outlined success-icon">check_circle</span>
+                                <p className="success-title">{group.name || 'Group Link Created!'}</p>
+                                <p className="success-subtitle">
+                                    Expires in 7 days · {group.memberCount || 1} member(s)
+                                </p>
+                            </div>
+
+                            {/* Link Display */}
+                            <div className="link-display">
+                                <span className="material-symbols-outlined link-icon">link</span>
+                                <span className="link-text">{group.url}</span>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="action-buttons">
+                                <button
+                                    className="btn btn-secondary"
+                                    onClick={handleCopy}
+                                >
+                                    <span className="material-symbols-outlined">
+                                        {copied ? 'check' : 'content_copy'}
+                                    </span>
+                                    {copied ? 'Copied!' : 'Copy Link'}
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleShare}
+                                >
+                                    <span className="material-symbols-outlined">share</span>
+                                    Share
+                                </button>
+                            </div>
+
+                            {/* Done Button */}
+                            <button
+                                className="btn btn-tertiary done-btn"
+                                onClick={() => {
+                                    if (onSuccess) onSuccess(group);
+                                    onClose();
+                                }}
+                            >
+                                Done
+                            </button>
+                        </>
+                    )}
                 </div>
 
-                {!group ? (
-                    <>
-                        {/* Group Name Input */}
-                        <div style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem', display: 'block', marginBottom: '0.5rem' }}>
-                                Group Name (optional)
-                            </label>
-                            <input
-                                type="text"
-                                placeholder="e.g., Book Club, Work Team"
-                                value={groupName}
-                                onChange={e => setGroupName(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.875rem 1rem',
-                                    borderRadius: '0.75rem',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    background: 'rgba(0,0,0,0.3)',
-                                    color: 'white',
-                                    fontSize: '1rem',
-                                    outline: 'none',
-                                    boxSizing: 'border-box'
-                                }}
-                            />
-                        </div>
+                <style>{`
+                    .group-invite-modal {
+                        width: 100%;
+                        max-width: 400px;
+                    }
 
-                        {/* Info */}
-                        <div style={{
-                            background: 'rgba(59, 130, 246, 0.1)',
-                            border: '1px solid rgba(59, 130, 246, 0.3)',
-                            borderRadius: '0.75rem',
-                            padding: '1rem',
-                            marginBottom: '1.5rem'
-                        }}>
-                            <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem', margin: 0 }}>
-                                <span style={{ fontWeight: '600', color: '#3b82f6' }}>How it works:</span> Everyone who joins this link will be connected to each other — not just to you.
-                            </p>
-                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', margin: '0.5rem 0 0' }}>
-                                Link expires in 7 days · Max 50 members
-                            </p>
-                        </div>
+                    .group-invite-modal .invite-modal {
+                        padding: 24px;
+                    }
 
-                        {error && (
-                            <div style={{
-                                background: 'rgba(239, 68, 68, 0.1)',
-                                border: '1px solid rgba(239, 68, 68, 0.3)',
-                                borderRadius: '0.5rem',
-                                padding: '0.75rem',
-                                marginBottom: '1rem'
-                            }}>
-                                <p style={{ color: '#ef4444', fontSize: '0.875rem', margin: 0 }}>{error}</p>
-                            </div>
-                        )}
+                    .group-invite-modal .invite-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 8px;
+                    }
 
-                        {/* Create Button */}
-                        <button
-                            onClick={handleCreate}
-                            disabled={loading}
-                            style={{
-                                width: '100%',
-                                padding: '1rem',
-                                borderRadius: '0.75rem',
-                                border: 'none',
-                                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-                                color: 'white',
-                                fontSize: '1rem',
-                                fontWeight: '600',
-                                cursor: loading ? 'not-allowed' : 'pointer',
-                                opacity: loading ? 0.7 : 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '0.5rem'
-                            }}
-                        >
-                            {loading ? (
-                                <>Creating...</>
-                            ) : (
-                                <>
-                                    <span className="material-icons" style={{ fontSize: '20px' }}>link</span>
-                                    Create Group Link
-                                </>
-                            )}
-                        </button>
-                    </>
-                ) : (
-                    <>
-                        {/* Success State */}
-                        <div style={{
-                            background: 'rgba(16, 185, 129, 0.1)',
-                            border: '1px solid rgba(16, 185, 129, 0.3)',
-                            borderRadius: '0.75rem',
-                            padding: '1rem',
-                            marginBottom: '1.5rem',
-                            textAlign: 'center'
-                        }}>
-                            <span className="material-icons" style={{ color: '#10b981', fontSize: '2.5rem', marginBottom: '0.5rem', display: 'block' }}>check_circle</span>
-                            <p style={{ color: 'white', fontSize: '1rem', fontWeight: '600', margin: '0 0 0.25rem' }}>
-                                {group.name || 'Group Link Created!'}
-                            </p>
-                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', margin: 0 }}>
-                                Expires in 7 days · {group.memberCount || 1} member(s)
-                            </p>
-                        </div>
+                    .group-invite-modal .invite-header h2 {
+                        margin: 0;
+                        font-size: 22px;
+                        font-weight: 800;
+                    }
 
-                        {/* Link Display */}
-                        <div style={{
-                            background: 'rgba(0,0,0,0.3)',
-                            borderRadius: '0.75rem',
-                            padding: '1rem',
-                            marginBottom: '1.5rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.75rem'
-                        }}>
-                            <span className="material-icons" style={{ color: '#3b82f6', fontSize: '20px' }}>link</span>
-                            <span style={{
-                                color: 'white',
-                                fontSize: '0.875rem',
-                                flex: 1,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                            }}>
-                                {group.url}
-                            </span>
-                        </div>
+                    .group-invite-modal .close-btn {
+                        width: 32px;
+                        height: 32px;
+                        border: none;
+                        background: var(--bg-tertiary);
+                        border-radius: var(--radius-sm);
+                        font-size: 16px;
+                        cursor: pointer;
+                        color: var(--text-secondary);
+                        transition: all var(--transition-fast);
+                    }
 
-                        {/* Action Buttons */}
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            <button
-                                onClick={handleCopy}
-                                style={{
-                                    flex: 1,
-                                    padding: '1rem',
-                                    borderRadius: '0.75rem',
-                                    border: '1px solid rgba(255,255,255,0.2)',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    color: 'white',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                <span className="material-icons" style={{ fontSize: '18px' }}>
-                                    {copied ? 'check' : 'content_copy'}
-                                </span>
-                                {copied ? 'Copied!' : 'Copy'}
-                            </button>
-                            <button
-                                onClick={handleShare}
-                                style={{
-                                    flex: 1,
-                                    padding: '1rem',
-                                    borderRadius: '0.75rem',
-                                    border: 'none',
-                                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                                    color: 'white',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '600',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '0.5rem'
-                                }}
-                            >
-                                <span className="material-icons" style={{ fontSize: '18px' }}>share</span>
-                                Share
-                            </button>
-                        </div>
+                    .group-invite-modal .close-btn:hover {
+                        background: var(--bg-glass-hover);
+                        color: var(--text-primary);
+                    }
 
-                        {/* Done Button */}
-                        <button
-                            onClick={() => {
-                                if (onSuccess) onSuccess(group);
-                                onClose();
-                            }}
-                            style={{
-                                width: '100%',
-                                padding: '1rem',
-                                marginTop: '1rem',
-                                borderRadius: '0.75rem',
-                                border: 'none',
-                                background: 'rgba(255,255,255,0.1)',
-                                color: 'white',
-                                fontSize: '1rem',
-                                fontWeight: '500',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Done
-                        </button>
-                    </>
-                )}
+                    .group-invite-modal .invite-description {
+                        color: var(--text-secondary);
+                        margin-bottom: 24px;
+                        font-size: 14px;
+                    }
+
+                    .group-invite-modal .link-section {
+                        margin-bottom: 16px;
+                    }
+
+                    .group-invite-modal .input-label {
+                        display: block;
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: var(--text-secondary);
+                        margin-bottom: 8px;
+                    }
+
+                    .group-invite-modal .group-name-input {
+                        width: 100%;
+                        padding: 14px 16px;
+                        border-radius: var(--radius-md);
+                        border: 1px solid var(--border-subtle);
+                        background: var(--bg-tertiary);
+                        color: var(--text-primary);
+                        font-size: 16px;
+                        outline: none;
+                        box-sizing: border-box;
+                        transition: border-color var(--transition-fast);
+                    }
+
+                    .group-invite-modal .group-name-input:focus {
+                        border-color: var(--primary);
+                    }
+
+                    .group-invite-modal .group-name-input::placeholder {
+                        color: var(--text-muted);
+                    }
+
+                    .group-invite-modal .info-box {
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 12px;
+                        padding: 14px 16px;
+                        background: rgba(59, 130, 246, 0.1);
+                        border: 1px solid rgba(59, 130, 246, 0.2);
+                        border-radius: var(--radius-md);
+                        margin-bottom: 20px;
+                    }
+
+                    .group-invite-modal .info-icon {
+                        color: #3b82f6;
+                        font-size: 20px;
+                        flex-shrink: 0;
+                    }
+
+                    .group-invite-modal .info-text {
+                        margin: 0;
+                        font-size: 14px;
+                        color: var(--text-primary);
+                    }
+
+                    .group-invite-modal .info-subtext {
+                        margin: 4px 0 0;
+                        font-size: 12px;
+                        color: var(--text-muted);
+                    }
+
+                    .group-invite-modal .create-btn {
+                        width: 100%;
+                        padding: 14px 20px;
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                    }
+
+                    .group-invite-modal .error-message {
+                        margin-bottom: 16px;
+                        padding: 10px 14px;
+                        background: rgba(239, 68, 68, 0.15);
+                        color: var(--error);
+                        border-radius: var(--radius-sm);
+                        font-size: 13px;
+                    }
+
+                    .group-invite-modal .success-box {
+                        text-align: center;
+                        padding: 20px;
+                        background: rgba(16, 185, 129, 0.1);
+                        border: 1px solid rgba(16, 185, 129, 0.2);
+                        border-radius: var(--radius-md);
+                        margin-bottom: 20px;
+                    }
+
+                    .group-invite-modal .success-icon {
+                        color: var(--success);
+                        font-size: 40px;
+                        margin-bottom: 8px;
+                    }
+
+                    .group-invite-modal .success-title {
+                        margin: 0 0 4px;
+                        font-size: 18px;
+                        font-weight: 700;
+                        color: var(--text-primary);
+                    }
+
+                    .group-invite-modal .success-subtitle {
+                        margin: 0;
+                        font-size: 13px;
+                        color: var(--text-muted);
+                    }
+
+                    .group-invite-modal .link-display {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        padding: 14px 16px;
+                        background: var(--bg-tertiary);
+                        border-radius: var(--radius-md);
+                        margin-bottom: 16px;
+                    }
+
+                    .group-invite-modal .link-icon {
+                        color: var(--primary);
+                        font-size: 20px;
+                        flex-shrink: 0;
+                    }
+
+                    .group-invite-modal .link-text {
+                        flex: 1;
+                        font-size: 14px;
+                        color: var(--text-primary);
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                    }
+
+                    .group-invite-modal .action-buttons {
+                        display: flex;
+                        gap: 12px;
+                        margin-bottom: 12px;
+                    }
+
+                    .group-invite-modal .action-buttons .btn {
+                        flex: 1;
+                        padding: 14px 16px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                        font-weight: 600;
+                    }
+
+                    .group-invite-modal .done-btn {
+                        width: 100%;
+                        padding: 12px 20px;
+                        background: var(--bg-tertiary);
+                        color: var(--text-secondary);
+                        border: none;
+                        border-radius: var(--radius-md);
+                        font-size: 14px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: all var(--transition-fast);
+                    }
+
+                    .group-invite-modal .done-btn:hover {
+                        background: var(--bg-glass-hover);
+                        color: var(--text-primary);
+                    }
+                `}</style>
             </div>
         </div>
     );

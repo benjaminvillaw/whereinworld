@@ -545,7 +545,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                             title="Invite Individual"
                         >
                             <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>person_add</span>
-                            Individual
+                            Add Individual
                         </button>
                     )}
                     {onGroupInvite && (
@@ -571,7 +571,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                             title="Create Group Invite"
                         >
                             <span className="material-symbols-outlined" style={{ fontSize: '1rem' }}>groups</span>
-                            Group
+                            Add Group
                         </button>
                     )}
                 </div>
