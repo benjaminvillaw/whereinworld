@@ -2,19 +2,19 @@ import { useState, useEffect } from 'react';
 import { api } from '../lib/supabase';
 
 // Calculate friend's cities and countries stats
-function calculateStats(friend, allFriends = []) {
-    // In a real app, this would come from the friend's data
-    // For now, we'll generate some reasonable numbers based on available data
-    const cities = friend.citiesCount || Math.floor(Math.random() * 12) + 1;
-    const countries = friend.countriesCount || Math.floor(Math.random() * 6) + 1;
+// Now uses networkStats passed from parent for real data
+function calculateStats(friend, networkStats = {}) {
+    // Use real network stats if provided, otherwise fallback to 1
+    const cities = networkStats.cities || 1;
+    const countries = networkStats.countries || 1;
     return { cities, countries };
 }
 
-export function FriendProfilePopup({ friend, onClose, onRemoveFriend }) {
+export function FriendProfilePopup({ friend, onClose, onRemoveFriend, networkStats }) {
     const [visible, setVisible] = useState(false);
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
     const [removing, setRemoving] = useState(false);
-    const stats = calculateStats(friend);
+    const stats = calculateStats(friend, networkStats);
 
     const handleRemoveFriend = async () => {
         setRemoving(true);

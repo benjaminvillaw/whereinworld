@@ -429,6 +429,7 @@ export function CityDetail({ city, onBack }) {
                 <FriendProfilePopup
                     friend={selectedFriend}
                     onClose={() => setSelectedFriend(null)}
+                    networkStats={{ cities: 1, countries: 1 }}
                 />
             )}
         </div>

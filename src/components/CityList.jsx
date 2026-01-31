@@ -80,6 +80,19 @@ const WEATHER_ICONS = {
 // Mock weather data (in a real app, this would come from an API)
 const MOCK_WEATHER = ['Clear', 'Cloudy', 'Rain', 'Sunny'];
 
+// Seeded random based on string hash for consistent weather per city
+function getSeededWeather(cityName) {
+    if (!cityName) return MOCK_WEATHER[0];
+    // Simple string hash
+    let hash = 0;
+    for (let i = 0; i < cityName.length; i++) {
+        hash = ((hash << 5) - hash) + cityName.charCodeAt(i);
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    const index = Math.abs(hash) % MOCK_WEATHER.length;
+    return MOCK_WEATHER[index];
+}
+
 function getCityImage(cityName) {
     const key = cityName?.toLowerCase() || 'default';
 
@@ -300,7 +313,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                         city: userDisplayCity,
                         country: userDisplayCountry,
                         friends: [],
-                        weather: MOCK_WEATHER[Math.floor(Math.random() * MOCK_WEATHER.length)],
+                        weather: getSeededWeather(userDisplayCity),
                         isUserCity: true
                     });
                 }
@@ -350,7 +363,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                     city: displayCity,
                     country: displayCountry,
                     friends: [],
-                    weather: MOCK_WEATHER[Math.floor(Math.random() * MOCK_WEATHER.length)]
+                    weather: getSeededWeather(displayCity)
                 });
             }
 
