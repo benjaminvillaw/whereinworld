@@ -151,7 +151,7 @@ export function Auth({ onAuthenticated }) {
                 public
               </span>
             </div>
-            <h1 className="logo-text">Where In World</h1>
+            <h1 className="logo-text">Where In World?</h1>
             <p className="logo-tagline">See where your friends are</p>
           </div>
 

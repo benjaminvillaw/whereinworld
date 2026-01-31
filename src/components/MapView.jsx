@@ -116,6 +116,19 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
         }))
     }), [citiesData]);
 
+    // Calculate user's estimated city (defined first so it can be used in userGeoJson)
+    const userEstimatedCity = useMemo(() => {
+        if (!userLocation?.lat || !userLocation?.lng) return null;
+        const userLat = parseFloat(userLocation.lat);
+        const userLng = parseFloat(userLocation.lng);
+        if (isNaN(userLat) || isNaN(userLng)) return null;
+        const nearestMajor = getNearestCity(userLat, userLng);
+        if (nearestMajor.distance <= 30) {
+            return nearestMajor.name;
+        }
+        return userLocation.city || 'Your Location';
+    }, [userLocation]);
+
     // Create GeoJSON for user location
     const userGeoJson = useMemo(() => {
         if (!userLocation?.lat || !userLocation?.lng) return null;
@@ -128,24 +141,12 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
                     coordinates: [userLocation.lng, userLocation.lat]
                 },
                 properties: {
-                    label: 'YOU'
+                    label: 'YOU',
+                    city: userEstimatedCity || ''
                 }
             }]
         };
-    }, [userLocation]);
-
-    // Calculate user's estimated city
-    const userEstimatedCity = useMemo(() => {
-        if (!userLocation?.lat || !userLocation?.lng) return null;
-        const userLat = parseFloat(userLocation.lat);
-        const userLng = parseFloat(userLocation.lng);
-        if (isNaN(userLat) || isNaN(userLng)) return null;
-        const nearestMajor = getNearestCity(userLat, userLng);
-        if (nearestMajor.distance <= 30) {
-            return nearestMajor.name;
-        }
-        return userLocation.city || 'Your Location';
-    }, [userLocation]);
+    }, [userLocation, userEstimatedCity]);
 
     // Clear map reference when entering ghost mode so it reinitializes when exiting
     useEffect(() => {
@@ -336,16 +337,23 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
                     }
                 });
 
-                // User location label
+                // User location label with city name
                 map.addLayer({
                     id: 'user-label',
                     type: 'symbol',
                     source: 'user-location',
                     layout: {
-                        'text-field': 'YOU',
+                        'text-field': [
+                            'format',
+                            'YOU', { 'font-scale': 1.0 },
+                            '\n', {},
+                            ['get', 'city'], { 'font-scale': 0.85 }
+                        ],
                         'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
                         'text-size': 10,
-                        'text-allow-overlap': true
+                        'text-allow-overlap': true,
+                        'text-anchor': 'top',
+                        'text-offset': [0, 0.5]
                     },
                     paint: {
                         'text-color': '#000000'
@@ -380,7 +388,7 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
                 mapLoadedRef.current = false;
             }
         };
-    }, []);
+    }, [ghostMode]);
 
     // Update cities data when it changes
     useEffect(() => {
@@ -435,10 +443,17 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
                 type: 'symbol',
                 source: 'user-location',
                 layout: {
-                    'text-field': 'YOU',
+                    'text-field': [
+                        'format',
+                        'YOU', { 'font-scale': 1.0 },
+                        '\n', {},
+                        ['get', 'city'], { 'font-scale': 0.85 }
+                    ],
                     'text-font': ['DIN Pro Bold', 'Arial Unicode MS Bold'],
                     'text-size': 10,
-                    'text-allow-overlap': true
+                    'text-allow-overlap': true,
+                    'text-anchor': 'top',
+                    'text-offset': [0, 0.5]
                 },
                 paint: {
                     'text-color': '#000000'
@@ -532,7 +547,7 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
                         color: 'white',
                         whiteSpace: 'nowrap',
                         flex: 1
-                    }}>Where In World</h1>
+                    }}>Where In World?</h1>
 
                     {/* Notification Bell - Top Right */}
                     <button

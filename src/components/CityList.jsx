@@ -492,7 +492,7 @@ export function CityList({ friends = [], userLocation, user, onSelectCity, onSel
                         color: 'white',
                         whiteSpace: 'nowrap',
                         flex: 1
-                    }}>Where In World</h1>
+                    }}>Where In World?</h1>
 
                     {/* Notification Bell - Top Right */}
                     <button

@@ -65,7 +65,7 @@ export function SplashScreen({ onComplete }) {
         <h1 className="splash-title">
           WHERE<br />
           IN<br />
-          WORLD
+          WORLD?
         </h1>
 
         {/* Subtitle */}
