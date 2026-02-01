@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { BottomNav } from './BottomNav';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -83,7 +83,7 @@ function getNearestCity(lat, lng) {
 export function MapView({ friends = [], userLocation, user, onSelectCity, onListView, onShowFriends, onSettings, onGoToUserCity, onInvite, onToggleGhostMode, onToggleNotifications, onUpdateLocation, onRequestLocation, ghostMode = false, notificationsMuted = false, centerOnUser = false, onCenterComplete }) {
     const mapContainerRef = useRef(null);
     const mapRef = useRef(null);
-    const mapLoadedRef = useRef(false);
+    const [mapLoaded, setMapLoaded] = useState(false); // Track map load state to trigger marker creation
     const cityMarkersRef = useRef([]); // Track custom avatar markers
 
     // Group friends by city
@@ -179,7 +179,7 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
         if (ghostMode && mapRef.current) {
             mapRef.current.remove();
             mapRef.current = null;
-            mapLoadedRef.current = false;
+            setMapLoaded(false);
         }
     }, [ghostMode]);
 
@@ -215,7 +215,7 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
 
         // Add atmosphere and globe effects
         map.on('load', () => {
-            mapLoadedRef.current = true;
+            setMapLoaded(true);
 
             map.setFog({
                 color: 'rgb(10, 10, 10)',
@@ -341,24 +341,24 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
             if (mapRef.current) {
                 mapRef.current.remove();
                 mapRef.current = null;
-                mapLoadedRef.current = false;
+                setMapLoaded(false);
             }
         };
     }, [ghostMode]);
 
     // Update cities data when it changes
     useEffect(() => {
-        if (!mapRef.current || !mapLoadedRef.current) return;
+        if (!mapRef.current || !mapLoaded) return;
 
         const source = mapRef.current.getSource('cities');
         if (source) {
             source.setData(citiesGeoJson);
         }
-    }, [citiesGeoJson]);
+    }, [citiesGeoJson, mapLoaded]);
 
     // Create and update avatar markers for cities
     useEffect(() => {
-        if (!mapRef.current || !mapLoadedRef.current) return;
+        if (!mapRef.current || !mapLoaded) return;
 
         // Remove existing markers
         cityMarkersRef.current.forEach(marker => marker.remove());
@@ -491,11 +491,11 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
         return () => {
             cityMarkersRef.current.forEach(marker => marker.remove());
         };
-    }, [citiesData, onSelectCity]);
+    }, [citiesData, onSelectCity, mapLoaded]);
 
     // Update user location when it changes
     useEffect(() => {
-        if (!mapRef.current || !mapLoadedRef.current || !userGeoJson) return;
+        if (!mapRef.current || !mapLoaded || !userGeoJson) return;
 
         const source = mapRef.current.getSource('user-location');
         if (source) {
@@ -553,11 +553,11 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
                 }
             });
         }
-    }, [userGeoJson]);
+    }, [userGeoJson, mapLoaded]);
 
     // Center on user location when centerOnUser prop changes to true
     useEffect(() => {
-        if (centerOnUser && mapRef.current && mapLoadedRef.current && userLocation?.lat && userLocation?.lng) {
+        if (centerOnUser && mapRef.current && mapLoaded && userLocation?.lat && userLocation?.lng) {
             mapRef.current.flyTo({
                 center: [parseFloat(userLocation.lng), parseFloat(userLocation.lat)],
                 zoom: 5,
