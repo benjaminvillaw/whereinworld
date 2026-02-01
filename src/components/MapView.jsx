@@ -213,10 +213,9 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
             'bottom-right'
         );
 
+
         // Add atmosphere and globe effects
         map.on('load', () => {
-            setMapLoaded(true);
-
             map.setFog({
                 color: 'rgb(10, 10, 10)',
                 'high-color': 'rgb(20, 20, 30)',
@@ -335,6 +334,12 @@ export function MapView({ friends = [], userLocation, user, onSelectCity, onList
             }
 
             // Note: City click/hover is now handled by avatar marker DOM elements
+        });
+
+        // Wait for the map to be fully rendered (including globe projection)
+        // before setting mapLoaded, ensuring markers are positioned correctly
+        map.once('idle', () => {
+            setMapLoaded(true);
         });
 
         return () => {
